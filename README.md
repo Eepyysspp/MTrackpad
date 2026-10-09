@@ -1,64 +1,66 @@
-# Ambiente Genesis
+# MTrackpad
 
-Controlador independiente del perfil **🌊 Ambiente · Teclados bajos permanentes** de la obra
-[Cover de Genesis](https://eepyysspp.github.io/Cover_Genesis/) (Robin Callaway) para la Orquesta de Laptops UC.
-Es el drone grave que nunca se detiene: tres sierras (raíz, quinta, octava) y un seno una octava abajo, que siguen la raíz de cada acorde,
-pasan por un filtro, una distorsión paralela `tanh` y reverb, y manejan las luces de la obra.
+**MTrackpad** (*musical trackpad*) es un instrumento que se toca con el trackpad, el mouse o una pantalla táctil.
+Un recuadro XY, un eje Z y los gestos que haces sobre él controlan un sintetizador, cuatro ranuras de muestras, una cadena de efectos y luces para proyectar.
+Todo lo que controla cada eje se puede reasignar.
 
-A diferencia de la página de la obra, aquí **tú eliges qué controla cada eje del panel**.
+Es una sola página web (`index.html`), sin instalación ni dependencias: funciona en Chrome, Edge o Firefox de escritorio.
 
-**Página:** <https://eepyysspp.github.io/Ambiente_Genesis/> (después de activar GitHub Pages).
+**Página:** <https://eepyysspp.github.io/MTrackpad/> (después de activar GitHub Pages).
 
-## Uso
+## Tocar
 
-1. Abre la página y presiona **Encender** (o `Espacio`).
-2. **▶ Iniciar** pone en marcha el reloj de la obra; **Iniciar a esa hora** sincroniza todas las laptops con la hora del computador
-   (también sirve `?inicio=20:30:00` en la dirección).
-3. Arrastra en el recuadro. El recuadro de **TOCAS / SILENCIO** dice cuándo entras y paras, y qué hacer en cada sección.
+1. Presiona **Encender** (o `Espacio`) y arrastra en el recuadro.
+2. Elige un preset arriba a la derecha para empezar.
+3. **Grabar** (`G`) graba lo que suena y lo deja para escuchar y descargar.
 
 | Tecla | Acción |
 |---|---|
-| `Espacio` | encender / apagar |
+| `Espacio` | encender / apagar (en modo «al tocar», mantener para que suene) |
 | `←` `→` / `↑` `↓` | mover X / Y (`Shift` = pasos finos) |
 | `Q` `E` o rueda del mouse sobre el recuadro | eje Z |
-| `F` | destello |
-| `V` | luces a pantalla completa (para proyectar) |
-| `1`–`9` | cargar preset |
+| `1`–`4` | disparar las muestras en modo disparo |
+| `F` | destello (sonido y luz) |
+| `V` | luces a pantalla completa, para proyectar |
+| `G` | grabar / detener |
 
-## Ejes configurables
+## Fuentes de control
 
-Fuentes: **X** e **Y** (recuadro), **Z** (deslizador auxiliar) y **R** (distancia del punto al centro: centro = 0, esquinas = 1).
-
-Cada asignación conecta una fuente con uno de 27 parámetros, con su propio **mínimo**, **máximo**, **curva**
-(lineal, x², x³, √x, S, exponencial, 5 escalones) e **inversión**. Si varias fuentes controlan el mismo parámetro se promedian;
-lo no asignado queda en su **valor base**.
-
-| Grupo | Parámetros |
+| Fuente | Qué mide |
 |---|---|
-| Salida | nivel del drone, volumen general |
-| Fuente | nivel síntesis, nivel muestra, voz raíz, quinta, octava, sub, desafinación (¢), ancho estéreo, glide |
-| Filtro | corte (Hz), resonancia Q, barrido del filtro (profundidad en octavas y velocidad) |
-| Distorsión | mezcla, dureza `tanh`, tono después de la distorsión |
-| Movimiento | trémolo (profundidad y velocidad) |
-| Espacio | envío a reverb, envío a eco, repeticiones, tiempo del eco (en tiempos a 130 BPM) |
-| Luces | intensidad, velocidad, reacción al sonido |
+| **X**, **Y** | posición en el recuadro |
+| **Z** | deslizador auxiliar (rueda del mouse, `Q`/`E`) |
+| **R** | distancia al centro (0 en el centro, 1 en las esquinas) |
+| **A** | ángulo alrededor del centro (0 arriba, en sentido horario) |
+| **V** | velocidad del gesto: sube al moverte rápido y vuelve sola a 0 |
+| **P** | presión del lápiz o del toque (con mouse vale 0,5 mientras aprietas) |
 
-Presets incluidos: **Original (Cover_Genesis)**, **Filtro resonante**, **Respiración**, **Muro**, **Coro desafinado** y **Oleaje**.
-Puedes guardar los tuyos y pasar la configuración completa a otra laptop como texto o archivo `.json` (pestaña *Guardar / compartir*).
+Cada **asignación** conecta una fuente con un parámetro, con su mínimo, máximo, curva (lineal, x², x³, √x, S, exponencial, 5 escalones) e inversión.
+Varias fuentes sobre un mismo parámetro se promedian; lo no asignado queda en su valor fijo (pestaña *Parámetros*).
 
-## Estructura
+## Sonido
 
-```
-index.html        toda la página (HTML, CSS y JS en un solo archivo, sin dependencias)
-sonidos/          loop de la grabación (no se publica, ver sonidos/LEEME.md)
-```
+- **Osciladores:** cuatro, cada uno con su forma de onda (sierra, cuadrada, triángulo, seno) y su intervalo en semitonos, más **ruido**. Desafinación en abanico, ancho estéreo y glide.
+- **Altura:** nota base y un parámetro *Altura* (±24 semitonos) que puede ajustarse a una escala (cromática, mayor, menor, pentatónicas, blues, dórica): asígnalo a un eje para tocar melodías.
+- **Puerta:** suena encendido/apagado, o solo mientras tocas el recuadro, con ataque y suelta.
+- **Muestras (M1–M4):** carga tus archivos o genera un ejemplo (acorde de pad, campana, viento, bombo, vocal). Cada ranura suena como:
+  - **loop**, transpuesto con la altura;
+  - **nube granular**: granos de la grabación con posición, tamaño, densidad y dispersión asignables;
+  - **disparo**: suena entera con `1`–`4`, su botón o al tocar el recuadro.
+- **Efectos, en este orden:** filtro (pasa-bajos, pasa-banda, pasa-altos, rechaza-banda o realce, con barrido automático) → distorsión paralela `tanh` con dureza y tono → trémolo → chorus estéreo → eco sincronizado al tempo y reverb (pieza, sala o catedral) → compresor.
 
-La partitura (secciones, acordes, colores y quién toca) es una copia de `js/partitura.js` de
-[Cover_Genesis](https://github.com/Eepyysspp/Cover_Genesis): está al comienzo del `<script>` en `SECCIONES`.
-Si cambias la partitura de la obra, actualiza también esa lista.
+## Luces
+
+Cuatro dibujos (manchas, anillos que pulsan con los golpes, espectro del sonido y cortina de color plano). El color, la saturación, la intensidad, la velocidad, el tamaño y la reacción al sonido son parámetros asignables como cualquier otro.
+
+## Presets
+
+Incluidos: *Drone filtrado*, *Theremin*, *Filtro resonante*, *Respiración*, *Muro de distorsión*, *Nube granular*, *Coro y eco*, *Oleaje* y *Gesto*.
+Puedes guardar los tuyos. La configuración completa se guarda sola en el navegador y se puede pasar a otro computador como texto o archivo `.json` (pestaña *Guardar*).
+Para cargar muestras propias automáticamente, ver [`sonidos/LEEME.md`](sonidos/LEEME.md).
 
 ## Publicar en GitHub Pages
 
-1. Crea en GitHub el repositorio vacío **Ambiente_Genesis** (sin README).
-2. En esta carpeta: `git add .`, `git commit -m "Controlador del ambiente"` y `git push -u origin main`.
+1. Crea en GitHub el repositorio vacío **MTrackpad** (sin README).
+2. En esta carpeta: `git add .`, `git commit -m "MTrackpad"` y `git push -u origin main`.
 3. En el repositorio: *Settings → Pages → Deploy from a branch → main / (root)*.

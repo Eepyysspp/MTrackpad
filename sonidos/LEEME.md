@@ -1,7 +1,9 @@
 # sonidos/
 
-Pon aquí `ambiente_drone_loop.wav` (el loop de los teclados bajos permanentes extraído de la grabación oficial, nota base Re♭3 = MIDI 49).
-Si la página lo encuentra al abrirse, lo usa como textura en loop; si no, suena solo la síntesis.
+Muestras que MTrackpad carga solo al abrirse (cuando la página se sirve desde un sitio web o un servidor local).
 
-Los archivos de audio de esta carpeta están en `.gitignore`: vienen de la grabación de Robin Callaway y **no se publican**. Úsalos solo en ensayos y en la presentación.
-También puedes cargar cualquier sonido propio desde la pestaña *Sonido y partitura*.
+1. Copia aquí tus archivos de audio (wav, mp3, ogg).
+2. Copia `muestras.ejemplo.json` como `muestras.json` y escribe en él qué archivo va en cada ranura (`"1"` a `"4"`), su modo (`loop`, `granular` o `disparo`) y su nota base (MIDI: 48 = Do3, 60 = Do4).
+
+Los archivos de audio de esta carpeta están en `.gitignore`, así que no se suben al repositorio. Si quieres publicar una muestra propia, quita su extensión del `.gitignore`.
+Al abrir `index.html` con doble clic (sin servidor) el navegador no deja leer esta carpeta: carga las muestras desde la pestaña *Muestras*.
