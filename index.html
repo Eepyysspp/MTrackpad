@@ -141,6 +141,12 @@ canvas#osc{width:100%;height:56px;display:block;border-radius:10px;background:va
 .ajustes label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
 .check{display:flex!important;flex-direction:row!important;gap:8px;align-items:flex-start;color:var(--text)!important;font-size:13px}
 .check input{margin-top:3px}
+.metodos{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}
+.metodo{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:10px;background:var(--panel2);border:1px solid var(--border)}
+.metodo h3{font:700 14px var(--display);display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.metodo h3 span{font:600 10.5px var(--mono);color:var(--ok);text-transform:uppercase;letter-spacing:.8px}
+.metodo p{font-size:12.5px;color:var(--muted)}
+.metodo .btn{align-self:flex-start}
 .voces{display:flex;flex-direction:column;gap:6px}
 .voz{display:grid;grid-template-columns:56px minmax(96px,1fr) 84px 84px 168px minmax(104px,1.1fr) 26px;gap:8px;align-items:center;padding:7px 8px;border-radius:10px;background:var(--panel2);border:1px solid var(--border);font-size:13px}
 .voz-cab{display:grid;grid-template-columns:56px minmax(96px,1fr) 84px 84px 168px minmax(104px,1.1fr) 26px;gap:8px;padding:0 8px;font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)}
@@ -221,7 +227,7 @@ textarea{width:100%;min-height:110px;font:12px/1.45 var(--mono);resize:vertical}
           <span class="msg" id="msgPistas"></span>
         </div>
 
-        <p class="ayuda"><kbd>Espacio</kbd> encender (en modo «al tocar», mantener) · <kbd>←</kbd><kbd>→</kbd> X · <kbd>↑</kbd><kbd>↓</kbd> Y (<kbd>Shift</kbd> fino) · <kbd>Q</kbd><kbd>E</kbd> o rueda sobre el recuadro: Z · <kbd>F</kbd> destello · <kbd>V</kbd> luces a pantalla completa · <kbd>G</kbd> grabar · <kbd>T</kbd> todas las pistas · <kbd>1</kbd>–<kbd>9</kbd> reproducir o parar cada pista</p>
+        <p class="ayuda"><kbd>Espacio</kbd> encender (en modo «al tocar», mantener) · <kbd>←</kbd><kbd>→</kbd> X · <kbd>↑</kbd><kbd>↓</kbd> Y (<kbd>Shift</kbd> fino) · <kbd>Q</kbd><kbd>E</kbd> o rueda sobre el recuadro: Z · <kbd>F</kbd> destello · <kbd>V</kbd> luces a pantalla completa · <kbd>G</kbd> grabar · <kbd>T</kbd> todas las pistas · <kbd>C</kbd> pulsar la cuerda · <kbd>1</kbd>–<kbd>9</kbd> reproducir o parar cada pista</p>
       </section>
 
       <!-- ============ Configuración ============ -->
@@ -230,6 +236,7 @@ textarea{width:100%;min-height:110px;font:12px/1.45 var(--mono);resize:vertical}
           <button role="tab" data-tab="ejes" aria-selected="true">Ejes</button>
           <button role="tab" data-tab="base" aria-selected="false">Parámetros</button>
           <button role="tab" data-tab="fuente" aria-selected="false">Osciladores y altura</button>
+          <button role="tab" data-tab="sintesis" aria-selected="false">Métodos de síntesis</button>
           <button role="tab" data-tab="efectos" aria-selected="false">Efectos</button>
           <button role="tab" data-tab="luces" aria-selected="false">Luces</button>
           <button role="tab" data-tab="guardar" aria-selected="false">Guardar</button>
@@ -320,16 +327,41 @@ textarea{width:100%;min-height:110px;font:12px/1.45 var(--mono);resize:vertical}
           </div>
         </div>
 
+        <!-- Métodos de síntesis -->
+        <div data-panel="sintesis" hidden>
+          <p class="nota" style="margin-bottom:12px">Los métodos de síntesis y procesamiento que usa MTrackpad, dónde están y un preset para probar cada uno. Sus parámetros están en <i>Parámetros</i> y todos se pueden asignar a los ejes.</p>
+          <div class="metodos" id="metodos"></div>
+
+          <div class="sub">Espacialización</div>
+          <div class="ajustes">
+            <label>Modo
+              <select id="ajEsp"><option value="estereo">Estéreo (paneo y ancho, para parlantes)</option><option value="3d">3D binaural (dirección, altura y distancia, con audífonos)</option></select></label>
+          </div>
+          <div class="sub">Convolución</div>
+          <div class="fila">
+            <label class="btn peq" for="archivoIr">Cargar respuesta al impulso (.wav)</label><input type="file" id="archivoIr" accept="audio/*" hidden>
+            <span class="nota" id="estadoIr">Sin archivo: se usan las salas generadas (pestaña Efectos).</span>
+          </div>
+          <div class="sub">Síntesis cruzada</div>
+          <div class="ajustes">
+            <label>Qué moldea a qué
+              <select id="ajCruce"><option value="susurro">Susurro: los osciladores moldean al ruido</option><option value="mic">Vocoder: tu voz (micrófono) moldea a los osciladores</option></select></label>
+          </div>
+          <p class="nota" id="estadoMic" style="margin-top:6px"></p>
+          <div class="sub">Modelo físico</div>
+          <div class="fila"><button class="btn peq" id="btnPulsar">Pulsar la cuerda <kbd>C</kbd></button><span class="nota">La cuerda también se pulsa al tocar el recuadro y en cada nota del arpegiador.</span></div>
+        </div>
+
         <!-- Efectos -->
         <div data-panel="efectos" hidden>
-          <p class="nota" style="margin-bottom:10px">Orden de la cadena: puerta → filtro → distorsión → lo-fi → tono → modulador en anillo → phaser → trémolo → paneo automático → chorus → eco y reverb → limitador. Los valores de cada efecto están en <i>Parámetros</i>; aquí se eligen sus formas.</p>
+          <p class="nota" style="margin-bottom:10px">Orden de la cadena: fuentes (osciladores, ruido, cuerda, síntesis cruzada) → puerta → filtro → distorsión → lo-fi → tono → modulador en anillo → AM → phaser → trémolo → paneo automático → espacialización (estéreo o 3D) → chorus → eco y reverb → limitador. Los valores de cada efecto están en <i>Parámetros</i>; aquí se eligen sus formas.</p>
           <div class="ajustes">
             <label>Tipo de filtro
               <select id="ajFiltro"><option value="lowpass">Pasa-bajos</option><option value="bandpass">Pasa-banda</option><option value="highpass">Pasa-altos</option><option value="notch">Rechaza-banda</option><option value="peaking">Realce (+12 dB)</option></select></label>
             <label>Forma del trémolo
               <select id="ajTremForma"><option value="sine">Seno (suave)</option><option value="triangle">Triángulo</option><option value="square">Cuadrada (corta el sonido)</option><option value="sawtooth">Sierra</option></select></label>
-            <label>Tamaño de la reverb
-              <select id="ajSala"><option value="1.4">Pieza (1,4 s)</option><option value="3.5">Sala (3,5 s)</option><option value="7">Catedral (7 s)</option></select></label>
+            <label>Reverberación (convolución)
+              <select id="ajSala"><option value="1.4">Pieza (1,4 s)</option><option value="3.5">Sala (3,5 s)</option><option value="7">Catedral (7 s)</option><option value="placa">Placa metálica</option><option value="resorte">Resorte</option><option value="caverna">Caverna (9 s, con ecos)</option><option value="archivo" id="optIrArchivo" disabled>Archivo propio (cargar abajo)</option></select></label>
           </div>
           <div class="sub">Calidad</div>
           <p class="nota">La síntesis corre a la frecuencia de muestreo de tu tarjeta de sonido (<span id="infoSr">44,1 o 48 kHz</span>), la distorsión usa sobremuestreo ×4 para no generar aliasing y la salida pasa por un limitador transparente en vez de un compresor. Las grabaciones se guardan sin compresión, en WAV de 24 bits.</p>
@@ -409,6 +441,17 @@ const PARAMS = [
 for (let i = 1; i <= MAX_VOCES; i++) PARAMS.push({ id: "osc" + i, g: "Osciladores", n: "Oscilador " + i, min: 0, max: 1.5, def: 1 });
 PARAMS.push(
   { id: "ruido", g: "Osciladores", n: "Ruido", min: 0, max: 1, def: 0 },
+  { id: "aditArm", g: "Aditiva", n: "Aditiva · número de armónicos", min: 1, max: 40, def: 12 },
+  { id: "aditPend", g: "Aditiva", n: "Aditiva · caída de los agudos", min: 0, max: 2.5, def: 1 },
+  { id: "aditPares", g: "Aditiva", n: "Aditiva · armónicos pares", min: 0, max: 1, def: 1 },
+  { id: "fmIndice", g: "FM", n: "FM · índice (cuánto modula)", min: 0, max: 20, def: 0 },
+  { id: "fmRatio", g: "FM", n: "FM · razón modulador / portadora", min: 0.25, max: 16, def: 2, u: "×", log: true },
+  { id: "cuerda", g: "Cuerda (modelo físico)", n: "Cuerda · nivel", min: 0, max: 1.5, def: 0 },
+  { id: "cuerdaDecae", g: "Cuerda (modelo físico)", n: "Cuerda · duración", min: 0.1, max: 15, def: 3, u: " s", log: true },
+  { id: "cuerdaBrillo", g: "Cuerda (modelo físico)", n: "Cuerda · brillo", min: 0, max: 1, def: 0.6 },
+  { id: "cuerdaRep", g: "Cuerda (modelo físico)", n: "Cuerda · pulsaciones automáticas", min: 0, max: 12, def: 0, u: " /s" },
+  { id: "cruce", g: "Síntesis cruzada", n: "Cruzada · mezcla", min: 0, max: 1, def: 0 },
+  { id: "cruceQ", g: "Síntesis cruzada", n: "Cruzada · definición de las bandas", min: 1, max: 30, def: 8, log: true },
   { id: "corte", g: "Filtro", n: "Corte del filtro", min: 40, max: 18000, def: 2400, u: "Hz", log: true },
   { id: "q", g: "Filtro", n: "Resonancia (Q)", min: 0.3, max: 20, def: 1, log: true },
   { id: "lfoF", g: "Filtro", n: "Barrido del filtro · profundidad", min: 0, max: 3, def: 0, u: " oct" },
@@ -418,8 +461,10 @@ PARAMS.push(
   { id: "tono", g: "Distorsión", n: "Tono (pasa-bajos final)", min: 300, max: 20000, def: 20000, u: "Hz", log: true },
   { id: "bits", g: "Lo-fi", n: "Lo-fi · bits (16 = apagado)", min: 1, max: 16, def: 16 },
   { id: "reduccion", g: "Lo-fi", n: "Lo-fi · baja resolución (1 = apagado)", min: 1, max: 40, def: 1, u: "×", log: true },
-  { id: "ring", g: "Modulación", n: "Anillo · mezcla", min: 0, max: 1, def: 0 },
-  { id: "ringFrec", g: "Modulación", n: "Anillo · frecuencia", min: 1, max: 3000, def: 220, u: "Hz", log: true },
+  { id: "ring", g: "Modulación", n: "Anillo (RM) · mezcla", min: 0, max: 1, def: 0 },
+  { id: "ringFrec", g: "Modulación", n: "Anillo (RM) · frecuencia", min: 1, max: 3000, def: 220, u: "Hz", log: true },
+  { id: "am", g: "Modulación", n: "AM · profundidad", min: 0, max: 1, def: 0 },
+  { id: "amFrec", g: "Modulación", n: "AM · frecuencia", min: 1, max: 3000, def: 110, u: "Hz", log: true },
   { id: "phaser", g: "Modulación", n: "Phaser · mezcla", min: 0, max: 1, def: 0 },
   { id: "phaserVel", g: "Modulación", n: "Phaser · velocidad", min: 0.02, max: 8, def: 0.4, u: "Hz", log: true },
   { id: "trem", g: "Modulación", n: "Trémolo · profundidad", min: 0, max: 1, def: 0 },
@@ -432,6 +477,9 @@ PARAMS.push(
   { id: "eco", g: "Espacio", n: "Envío a eco", min: 0, max: 1, def: 0 },
   { id: "ecoFb", g: "Espacio", n: "Eco · repeticiones", min: 0, max: 0.92, def: 0.4 },
   { id: "ecoT", g: "Espacio", n: "Eco · tiempo", min: 0.125, max: 2, def: 0.75, u: " tiempos" },
+  { id: "azimut", g: "Espacio 3D", n: "3D · dirección (azimut)", min: -180, max: 180, def: 0, u: "°" },
+  { id: "elevacion", g: "Espacio 3D", n: "3D · altura (elevación)", min: -90, max: 90, def: 0, u: "°" },
+  { id: "distancia", g: "Espacio 3D", n: "3D · distancia", min: 0.5, max: 12, def: 1.5, u: " m", log: true },
   { id: "lucTono", g: "Luces", n: "Luces · color (tono)", min: 0, max: 360, def: 215, u: "°" },
   { id: "lucSat", g: "Luces", n: "Luces · saturación", min: 0, max: 1, def: 0.75 },
   { id: "lucInt", g: "Luces", n: "Luces · intensidad", min: 0, max: 1, def: 0.6 },
@@ -450,6 +498,7 @@ function fmtV(id, v) {
   if (id === "reduccion") return v <= 1.02 ? "apagado" : "÷" + v.toFixed(1);
   if (p.u === "Hz") return v >= 1000 ? (v / 1000).toFixed(2) + " kHz" : v >= 100 ? Math.round(v) + " Hz" : v.toFixed(2) + " Hz";
   if (p.u === "°") return Math.round(v) + "°";
+  if (id === "cuerdaRep") return v < 0.05 ? "solo al tocar" : v.toFixed(1) + " /s";
   if (p.u === " st") return (v > 0 ? "+" : "") + v.toFixed(1) + " st";
   return (Math.abs(v) >= 10 ? v.toFixed(1) : v.toFixed(2)) + (p.u || "");
 }
@@ -519,6 +568,40 @@ const PRESETS = [
   { nombre: "Izquierda y derecha", desc: "X mueve el sonido de un parlante al otro (todo a la izquierda en el borde izquierdo, todo a la derecha en el derecho) y Y abre el filtro. Los dos osciladores salen cada uno por su lado.",
     asign: [A_("x", "paneo", -1, 1), A_("y", "corte", 250, 9000, "exp"), A_("y", "lucInt", 0.3, 1), A_("x", "lucTono", 180, 330)],
     base: { ancho: 0, eco: 0.25, ecoT: 0.5 }, aj: { puerta: "mantener", voces: V_(["sawtooth", 0, -6, -100], ["sawtooth", 7, 6, 100], ["sine", -12, 0, 0]) } },
+  { nombre: "Órgano aditivo", desc: "Síntesis aditiva: cada oscilador suma armónicos. X agrega armónicos (de 1, un seno puro, a 32), Y decide cuánto caen los agudos y Z cuánto suenan los armónicos pares (sin pares suena hueco, como un clarinete).",
+    asign: [A_("x", "aditArm", 1, 32), A_("y", "aditPend", 2.2, 0.2), A_("z", "aditPares", 0, 1), A_("x", "lucTam", 0.6, 1.8), A_("y", "lucInt", 0.3, 1)],
+    base: { corte: 16000, desaf: 4, reverb: 0.8, ataque: 0.08, suelta: 0.6, osc2: 0.6 }, aj: { puerta: "mantener", escala: "cont", nota: 48, voces: V_(["aditiva", 0], ["aditiva", 12, 3]) } },
+  { nombre: "FM eléctrico", desc: "Síntesis FM tipo piano eléctrico: suena al tocar. Z es la altura en escala mayor, Y el índice de modulación (más brillo) y X la razón en escalones enteros (1×, 2×, 3×…).",
+    asign: [A_("y", "fmIndice", 0, 8, "cuad"), A_("x", "fmRatio", 1, 5, "esc"), A_("z", "altura", -12, 12), A_("y", "lucInt", 0.3, 1)],
+    base: { fmRatio: 1, glide: 0.005, ataque: 0.005, suelta: 1.2, corte: 12000, reverb: 0.6, desaf: 3, osc2: 0.4 }, aj: { puerta: "tocar", escala: "mayor", nota: 48, voces: V_(["sine", 0], ["sine", 12, 4]) } },
+  { nombre: "Campana FM", desc: "FM con razón no entera (3,5×), que da parciales inarmónicos de campana. Toca para que suene; X sube el índice y Y cambia la razón. Suelta larga y reverb de catedral.",
+    asign: [A_("x", "fmIndice", 0, 12), A_("y", "fmRatio", 1.4, 7, "exp"), A_("x", "lucTono", 30, 90), A_("y", "lucInt", 0.3, 1)],
+    base: { glide: 0.005, ataque: 0.003, suelta: 4, corte: 16000, reverb: 1, osc2: 0 }, aj: { puerta: "tocar", escala: "cont", nota: 60, sala: 7, voces: V_(["sine", 0]) } },
+  { nombre: "AM radio", desc: "Modulación de amplitud a frecuencias audibles: X lleva la frecuencia del modulador desde un trémolo lento (2 Hz) hasta 800 Hz, donde aparecen bandas laterales; Y es la profundidad.",
+    asign: [A_("x", "amFrec", 2, 800, "exp"), A_("y", "am", 0, 1), A_("x", "lucVel", 0.1, 1.6), A_("y", "lucInt", 0.3, 1)],
+    base: { corte: 5000, reverb: 0.4 }, aj: { puerta: "mantener", voces: V_(["triangle", 0], ["sine", 12]) } },
+  { nombre: "Cuerda pulsada", desc: "Modelo físico de cuerda (Karplus-Strong). El arpegiador pulsa una nota en cada paso; X es el brillo de la cuerda, Y su duración, Z la altura. También suena al tocar el recuadro o con C.",
+    asign: [A_("x", "cuerdaBrillo", 0.05, 1), A_("y", "cuerdaDecae", 0.3, 10, "exp"), A_("z", "altura", -12, 12), A_("y", "lucInt", 0.3, 1)],
+    base: { cuerda: 1, sintesis: 0, arpVel: 2, arpLargo: 1, arpRango: 2, reverb: 0.7, corte: 18000, ataque: 0.003, suelta: 3, glide: 0.005 },
+    aj: { puerta: "mantener", escala: "pentam", arp: "subebaja", nota: 48 } },
+  { nombre: "Lluvia de cuerdas", desc: "Cuerdas pulsadas solas, sin arpegiador: X es cuántas pulsaciones por segundo (hasta 12), A (ángulo) la altura en pentatónica y Y el brillo. Como gotas o un rasgueo continuo.",
+    asign: [A_("x", "cuerdaRep", 0.5, 12, "cuad"), A_("a", "altura", 0, 24), A_("y", "cuerdaBrillo", 0.1, 1), A_("a", "lucTono", 160, 300)],
+    base: { cuerda: 1, sintesis: 0, cuerdaDecae: 2.5, reverb: 1, eco: 0.3, ecoT: 0.5, corte: 18000, glide: 0.005, ataque: 0.003, suelta: 3 }, aj: { puerta: "mantener", escala: "penta", nota: 48 } },
+  { nombre: "Susurro", desc: "Síntesis cruzada: los osciladores moldean un ruido, que suena como si los acordes fueran susurrados. X abre o cierra las bandas (más o menos definidas) y Y la mezcla con el sonido original.",
+    asign: [A_("x", "cruceQ", 2, 25, "exp"), A_("y", "cruce", 0.3, 1), A_("z", "altura", -12, 12), A_("y", "lucInt", 0.3, 1)],
+    base: { cruce: 1, corte: 16000, reverb: 0.7 }, aj: { puerta: "mantener", cruce: "susurro", escala: "menor" } },
+  { nombre: "Vocoder (micrófono)", desc: "Síntesis cruzada con tu voz: habla o canta al micrófono y la voz moldea a los osciladores (voz robótica). Usa audífonos. X es la altura del acorde y Y la definición de las bandas.",
+    asign: [A_("x", "altura", -12, 12), A_("y", "cruceQ", 3, 20, "exp"), A_("y", "lucInt", 0.3, 1)],
+    base: { cruce: 1, corte: 16000, reverb: 0.4 }, aj: { puerta: "mantener", cruce: "mic", escala: "mayor", nota: 48, voces: V_(["sawtooth", 0], ["sawtooth", 4], ["sawtooth", 7], ["sawtooth", -12]) } },
+  { nombre: "Órbita 3D", desc: "Espacialización binaural (usa audífonos): girar alrededor del centro (A) hace girar el sonido alrededor de tu cabeza, R lo acerca o aleja y Y lo sube o baja.",
+    asign: [A_("a", "azimut", -180, 180), A_("r", "distancia", 0.6, 6, "exp"), A_("y", "elevacion", -40, 60), A_("a", "lucTono", 0, 360), A_("r", "lucInt", 1, 0.3)],
+    base: { corte: 4000, reverb: 0.3 }, aj: { puerta: "mantener", esp: "3d" } },
+  { nombre: "Placa metálica", desc: "Reverberación por convolución con la respuesta de una placa metálica: brillante y densa. X abre el filtro, Y es cuánto sonido va a la placa y Z el nivel.",
+    asign: [A_("x", "corte", 300, 9000, "exp"), A_("y", "reverb", 0, 1.5), A_("z", "nivel", 0, 1), A_("y", "lucInt", 0.3, 1)],
+    base: { ataque: 0.01, suelta: 0.3 }, aj: { puerta: "tocar", sala: "placa", escala: "dorica", voces: V_(["triangle", 0], ["sine", 12]) } },
+  { nombre: "Resorte", desc: "Convolución con la respuesta de un resorte (como las reverbs de los amplificadores de guitarra): rebota y «boing». Toca; X es la altura y Y cuánto va al resorte.",
+    asign: [A_("x", "altura", -12, 12), A_("y", "reverb", 0.3, 1.5), A_("y", "lucInt", 0.3, 1)],
+    base: { ataque: 0.005, suelta: 0.25, glide: 0.005, corte: 7000 }, aj: { puerta: "tocar", sala: "resorte", escala: "blues", nota: 48, voces: V_(["square", 0], ["sawtooth", 12]) } },
   { nombre: "Pulso rítmico", desc: "Trémolo cuadrado que corta el sonido en pulsos. X es la velocidad (en escalones), Y el filtro, Z el paneo automático. Las luces laten con el pulso.",
     asign: [A_("x", "tremVel", 1, 16, "esc"), A_("y", "corte", 200, 8000, "exp"), A_("z", "autopan", 0, 1), A_("y", "lucInt", 0.3, 1)],
     base: { trem: 1, q: 4, lucAudio: 2.5, reverb: 0.5 }, aj: { puerta: "mantener", tremForma: "square" } },
@@ -528,7 +611,7 @@ const PRESETS = [
 const baseDef = () => Object.fromEntries(PARAMS.map(p => [p.id, p.def]));
 const VOCES_DEF = () => V_(["sawtooth", 0], ["sawtooth", 7], ["sawtooth", 12], ["sine", -12]);
 const AJ_DEF = () => ({ nota: 36, escala: "cont", puerta: "mantener", resp: 0.05, voces: VOCES_DEF(), filtro: "lowpass", sala: 3.5, bpm: 120,
-  luz: "manchas", luzPad: true, arp: "off", tremForma: "sine", sinc: true });
+  luz: "manchas", luzPad: true, arp: "off", tremForma: "sine", sinc: true, esp: "estereo", cruce: "susurro" });
 // Ajustes que un preset incluido no cambia si no los menciona
 const AJ_PERSONALES = ["luz", "luzPad", "sala", "bpm", "resp", "sinc"];
 const fabrica = () => ({ asign: PRESETS[0].asign.map(a => ({ ...a })), base: Object.assign(baseDef(), PRESETS[0].base), aj: Object.assign(AJ_DEF(), PRESETS[0].aj), preset: "b0" });
@@ -609,10 +692,36 @@ class Grabador extends AudioWorkletProcessor {
   }
 }
 registerProcessor("mt-grabador", Grabador);
+// Cuerda pulsada (Karplus-Strong): un ruido corto recorre una línea de retardo del largo de un período y se filtra en cada vuelta
+class Cuerda extends AudioWorkletProcessor {
+  static get parameterDescriptors() { return [
+    { name: "frecuencia", defaultValue: 110, minValue: 15, maxValue: 6000, automationRate: "k-rate" },
+    { name: "decae", defaultValue: 3, minValue: 0.05, maxValue: 30, automationRate: "k-rate" },
+    { name: "brillo", defaultValue: 0.6, minValue: 0, maxValue: 1, automationRate: "k-rate" }]; }
+  constructor() {
+    super(); this.N = Math.ceil(sampleRate / 15) + 4; this.buf = new Float32Array(this.N); this.w = 0; this.lp = 0; this.exc = 0; this.fuerza = 0; this.f = 110;
+    this.port.onmessage = e => { this.exc = Math.ceil(sampleRate / this.f); this.fuerza = e.data.fuerza || 1; };
+  }
+  process(_, sal, par) {
+    const o = sal[0], f = par.frecuencia[0]; this.f = f;
+    const L = Math.min(this.N - 2, sampleRate / f), g = Math.pow(0.001, 1 / (par.decae[0] * f)), b = 0.08 + 0.92 * par.brillo[0];
+    for (let n = 0; n < o[0].length; n++) {
+      let r = this.w - L; if (r < 0) r += this.N;
+      const i0 = Math.floor(r), fr = r - i0, s = this.buf[i0] * (1 - fr) + this.buf[(i0 + 1) % this.N] * fr;
+      this.lp += b * (s - this.lp);
+      let y = this.lp * g;
+      if (this.exc > 0) { y += (Math.random() * 2 - 1) * this.fuerza * 0.5; this.exc--; }
+      this.buf[this.w] = y; this.w = (this.w + 1) % this.N;
+      for (let c = 0; c < o.length; c++) o[c][n] = y;
+    }
+    return true;
+  }
+}
+registerProcessor("mt-cuerda", Cuerda);
 `;
 
 /* =================================================================== AUDIO */
-const NOM = { sawtooth: 0.08, square: 0.06, triangle: 0.14, sine: 0.2 };
+const NOM = { sawtooth: 0.08, square: 0.06, triangle: 0.14, sine: 0.2, aditiva: 0.1 };
 const KMAX = 60;
 const A = { ctx: null, voces: [] };
 const desafDe = (i, n) => n <= 1 ? 0 : -1 + 2 * i / (n - 1);
@@ -637,7 +746,7 @@ function iniciarAudio() {
   A.pistasBus = G(1); A.pistasBus.connect(A.mezcla);
   // Volumen general y envíos
   A.vol = G(0.7); A.vol.connect(A.lim);
-  A.conv = ctx.createConvolver(); A.conv.buffer = respuestaReverb(+cfg.aj.sala, 2.2);
+  A.conv = ctx.createConvolver(); A.conv.buffer = respuestaReverb(cfg.aj.sala, 2.2);
   A.revSend = G(0); const revOut = G(0.8); A.vol.connect(A.revSend); A.revSend.connect(A.conv); A.conv.connect(revOut); revOut.connect(A.lim);
   A.delay = ctx.createDelay(6); A.ecoSend = G(0); A.ecoFb = G(0.4); const ecoTono = ctx.createBiquadFilter(); ecoTono.type = "lowpass"; ecoTono.frequency.value = 7000;
   A.vol.connect(A.ecoSend); A.ecoSend.connect(A.delay); A.delay.connect(ecoTono); ecoTono.connect(A.ecoFb); A.ecoFb.connect(A.delay); A.delay.connect(A.lim);
@@ -650,8 +759,12 @@ function iniciarAudio() {
     A.lfoC.connect(g); g.connect(d.delayTime); d.connect(p); p.connect(A.chorus); A["chD" + s] = d;
   });
   // Paneo automático
-  A.autopan = pan(0); A.autopan.connect(A.post);
-  A.autopan.connect(A.chD1); A.autopan.connect(A["chD-1"]);
+  A.autopan = pan(0);
+  // Espacialización: estéreo normal o 3D binaural (HRTF, para audífonos)
+  A.espSal = G(1); A.espSal.connect(A.post); A.espSal.connect(A.chD1); A.espSal.connect(A["chD-1"]);
+  A.esp2d = G(1); A.autopan.connect(A.esp2d); A.esp2d.connect(A.espSal);
+  A.p3d = ctx.createPanner(); A.p3d.panningModel = "HRTF"; A.p3d.distanceModel = "inverse"; A.p3d.refDistance = 1; A.p3d.rolloffFactor = 1;
+  A.esp3d = G(0); A.autopan.connect(A.p3d); A.p3d.connect(A.esp3d); A.esp3d.connect(A.espSal);
   A.lfoP = lfo(0.5); A.lfoPG = G(0); A.lfoP.connect(A.lfoPG); if (A.autopan.pan) A.lfoPG.connect(A.autopan.pan);
   // Trémolo
   A.trem = G(1); A.trem.connect(A.autopan);
@@ -664,9 +777,12 @@ function iniciarAudio() {
   let ant = phIn;
   [300, 700, 1400, 2600].forEach(f => { const ap = ctx.createBiquadFilter(); ap.type = "allpass"; ap.frequency.value = f; ap.Q.value = 0.7; A.lfoPhG.connect(ap.detune); ant.connect(ap); ant = ap; });
   ant.connect(A.phMoj); A.phMoj.connect(A.nivel);
-  // Modulador en anillo
+  // Modulación de amplitud (AM): la ganancia oscila alrededor de 1
+  A.amIn = G(1); A.amIn.connect(phIn);
+  A.amOsc = lfo(110); A.amG = G(0); A.amOsc.connect(A.amG); A.amG.connect(A.amIn.gain);
+  // Modulador en anillo (RM): multiplica la señal por otra onda
   const rIn = G(1); A.rSeco = G(1); A.rMul = G(0); A.rMoj = G(0);
-  rIn.connect(A.rSeco); A.rSeco.connect(phIn); rIn.connect(A.rMul); A.rMul.connect(A.rMoj); A.rMoj.connect(phIn);
+  rIn.connect(A.rSeco); A.rSeco.connect(A.amIn); rIn.connect(A.rMul); A.rMul.connect(A.rMoj); A.rMoj.connect(A.amIn);
   A.ringOsc = lfo(220); A.ringOsc.connect(A.rMul.gain);
   // Tono final
   A.tono = ctx.createBiquadFilter(); A.tono.type = "lowpass"; A.tono.Q.value = 0.7; A.tono.connect(rIn);
@@ -685,7 +801,21 @@ function iniciarAudio() {
   // Puerta del arpegiador y puerta principal
   A.arpGate = G(1); A.arpGate.connect(A.filtro);
   A.puerta = G(0); A.puerta.connect(A.arpGate);
-  A.sintesis = G(1); A.sintesis.connect(A.puerta);
+  A.sintesis = G(1); A.sinDir = G(1); A.sintesis.connect(A.sinDir); A.sinDir.connect(A.puerta);
+  A.cuerdaG = G(0); A.cuerdaG.connect(A.puerta);
+  // Síntesis cruzada (vocoder de 16 bandas): la envolvente espectral de una señal (moduladora) moldea a otra (portadora)
+  A.vocMod = G(1); A.vocCar = G(1); A.vocOut = G(0); A.vocOut.connect(A.puerta); A.vocFiltros = [];
+  const curvaAbs = new Float32Array(1025); for (let i = 0; i < 1025; i++) curvaAbs[i] = Math.abs(i / 512 - 1);
+  for (let k = 0; k < 16; k++) {
+    const f = 110 * Math.pow(9000 / 110, k / 15);
+    const mb = ctx.createBiquadFilter(); mb.type = "bandpass"; mb.frequency.value = f; mb.Q.value = 8;
+    const rect = ctx.createWaveShaper(); rect.curve = curvaAbs;
+    const env = ctx.createBiquadFilter(); env.type = "lowpass"; env.frequency.value = 30;
+    const amp = G(6), vca = G(0);
+    const cb = ctx.createBiquadFilter(); cb.type = "bandpass"; cb.frequency.value = f; cb.Q.value = 8;
+    A.vocMod.connect(mb); mb.connect(rect); rect.connect(env); env.connect(amp); amp.connect(vca.gain);
+    A.vocCar.connect(cb); cb.connect(vca); vca.connect(A.vocOut); A.vocFiltros.push(mb, cb);
+  }
   // Vibrato (va al detune de todos los osciladores)
   A.lfoV = lfo(5.5); A.vibG = G(0); A.lfoV.connect(A.vibG);
   crearVoces();
@@ -693,6 +823,8 @@ function iniciarAudio() {
   const n = ctx.sampleRate * 2; A.ruidoBuf = ctx.createBuffer(1, n, ctx.sampleRate);
   const d = A.ruidoBuf.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
   const rs = ctx.createBufferSource(); rs.buffer = A.ruidoBuf; rs.loop = true; A.ruido = G(0); rs.connect(A.ruido); A.ruido.connect(A.puerta); rs.start();
+  A.ruidoCar = G(0.7); rs.connect(A.ruidoCar);
+  rutaCruce();
   aplicarAjustes(); aplicarAudio(calcular(), 0.01);
   cargarWorklet();
   setInterval(arpegiador, 20);
@@ -707,25 +839,46 @@ async function cargarWorklet() {
     A.grab = new AudioWorkletNode(A.ctx, "mt-grabador", { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1], channelCount: 2, channelCountMode: "explicit" });
     const mudo = A.ctx.createGain(); mudo.gain.value = 0; A.vivo.connect(A.grab); A.grab.connect(mudo); mudo.connect(A.ctx.destination);
     A.grab.port.onmessage = e => { if (Grab.activo) Grab.trozos.push(e.data); };
+    A.cuerda = new AudioWorkletNode(A.ctx, "mt-cuerda", { outputChannelCount: [1] });
+    A.cuerda.connect(A.cuerdaG);
     actualizar();
   } catch (e) { console.warn("AudioWorklet no disponible:", e); }
 }
 function crearVoces() {
   const ctx = A.ctx; if (!ctx) return;
   const t = ctx.currentTime;
-  A.voces.forEach(o => { try { o.g.gain.setTargetAtTime(0, t, 0.01); o.osc.stop(t + 0.08); } catch (e) {} setTimeout(() => { o.g.disconnect(); if (o.pan) o.pan.disconnect(); }, 200); });
+  A.voces.forEach(o => { try { o.g.gain.setTargetAtTime(0, t, 0.01); o.osc.stop(t + 0.08); o.mod.stop(t + 0.08); } catch (e) {} setTimeout(() => { o.g.disconnect(); o.modG.disconnect(); if (o.pan) o.pan.disconnect(); }, 200); });
   const v = E.vals.altura == null ? calcular() : E.vals;
   A.voces = cfg.aj.voces.map(vz => {
-    const osc = ctx.createOscillator(); osc.type = vz.forma; osc.frequency.value = mtof(cfg.aj.nota + cuantizar(v.altura) + vz.iv);
+    const osc = ctx.createOscillator(); if (vz.forma !== "aditiva") osc.type = vz.forma; osc.frequency.value = mtof(cfg.aj.nota + cuantizar(v.altura) + vz.iv);
     const g = ctx.createGain(); g.gain.value = 0;
     const p = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
     osc.connect(g); if (p) { g.connect(p); p.connect(A.sintesis); } else g.connect(A.sintesis);
     A.vibG.connect(osc.detune);
-    osc.start(); return { osc, g, pan: p };
+    if (vz.forma === "aditiva") osc.setPeriodicWave(ondaAditiva(v, true));
+    // FM: un modulador por oscilador, a una razón fija de su frecuencia
+    const mod = ctx.createOscillator(), modG = ctx.createGain(); modG.gain.value = 0; mod.connect(modG); modG.connect(osc.frequency); mod.start();
+    osc.start(); return { osc, g, pan: p, mod, modG };
   });
 }
-function respuestaReverb(seg, caida) {
-  const ctx = A.ctx, len = Math.floor(ctx.sampleRate * seg), b = ctx.createBuffer(2, len, ctx.sampleRate);
+// Respuestas al impulso para la convolución: salas generadas, placa, resorte, caverna o un archivo propio
+function respuestaReverb(tipo, caida) {
+  const ctx = A.ctx, sr = ctx.sampleRate;
+  if (tipo === "archivo" && A.irArchivo) return A.irArchivo;
+  if (tipo === "placa" || tipo === "resorte" || tipo === "caverna") {
+    const seg = { placa: 2.6, resorte: 2.2, caverna: 9 }[tipo], len = Math.floor(sr * seg), b = ctx.createBuffer(2, len, sr);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = b.getChannelData(ch); let lp = 0, ph = 0;
+      for (let i = 0; i < len; i++) {
+        const t = i / sr, x = 1 - i / len, ruido = Math.random() * 2 - 1;
+        if (tipo === "placa") { lp += (ruido - lp) * 0.9; d[i] = lp * Math.exp(-t * 2.6) * (t < 0.002 ? t / 0.002 : 1); }
+        else if (tipo === "resorte") { ph += 2 * Math.PI * (2400 * Math.exp(-((t * 30) % 1) * 3) + 300) / sr; d[i] = (Math.sin(ph) * 0.5 + ruido * 0.25) * Math.exp(-t * 2.2) * (0.6 + 0.4 * Math.cos(t * 2 * Math.PI * 30)); }
+        else { lp += (ruido - lp) * 0.12; const eco = [0.11, 0.23, 0.37, 0.52].some(e => Math.abs(t - e - ch * 0.013) < 0.0015) ? 2.5 : 0; d[i] = (lp * 1.6 + eco * ruido) * Math.pow(x, 1.6); }
+      }
+    }
+    return b;
+  }
+  const seg = +tipo || 3.5, len = Math.floor(sr * seg), b = ctx.createBuffer(2, len, sr);
   for (let ch = 0; ch < 2; ch++) {
     const d = b.getChannelData(ch); let lp = 0;
     for (let i = 0; i < len; i++) { const k = 0.5 + 0.45 * (1 - i / len); lp += ((Math.random() * 2 - 1) - lp) * k; d[i] = lp * Math.pow(1 - i / len, caida); }
@@ -744,8 +897,14 @@ function aplicarAudio(v, tau) {
     const vz = cfg.aj.voces[i]; if (!vz) return;
     S(o.g.gain, NOM[vz.forma] * norm * v["osc" + (i + 1)]); S(o.osc.detune, desafDe(i, n) * v.desaf + vz.fino);
     if (o.pan) S(o.pan.pan, clamp((vz.pan || 0) / 100 + panDe(i, n) * v.ancho, -1, 1));
-    S(o.osc.frequency, mtof(base + vz.iv), gl);
+    afinarVoz(o, vz, base, t, gl, v);
   });
+  if (A.cuerda) { A.cuerda.parameters.get("frecuencia").setValueAtTime(mtof(base), t); A.cuerda.parameters.get("decae").setValueAtTime(v.cuerdaDecae, t); A.cuerda.parameters.get("brillo").setValueAtTime(v.cuerdaBrillo, t); }
+  S(A.cuerdaG.gain, v.cuerda * 0.6);
+  S(A.sinDir.gain, 1 - v.cruce); S(A.vocOut.gain, v.cruce * (cfg.aj.cruce === "mic" ? 3 : 1.6));
+  A.vocFiltros.forEach(f => S(f.Q, v.cruceQ));
+  S(A.amIn.gain, 1 - v.am / 2); S(A.amG.gain, v.am / 2); S(A.amOsc.frequency, v.amFrec);
+  if (cfg.aj.esp === "3d") posicion3d(v, t, k);
   S(A.vibG.gain, v.vibrato); S(A.lfoV.frequency, v.vibratoVel);
   S(A.filtro.frequency, v.corte); S(A.filtro.Q, v.q);
   S(A.lfoFG.gain, v.lfoF * 1200); S(A.lfoF.frequency, v.lfoFVel);
@@ -761,9 +920,66 @@ function aplicarAudio(v, tau) {
   S(A.revSend.gain, v.reverb); S(A.ecoSend.gain, v.eco); S(A.ecoFb.gain, v.ecoFb); S(A.delay.delayTime, v.ecoT * 60 / cfg.aj.bpm, 0.2);
   S(A.nivel.gain, v.nivel, Math.max(k, 0.03)); S(A.vol.gain, v.vol);
 }
+// Frecuencia de un oscilador y de su modulador FM
+function afinarVoz(o, vz, nota, t, tau, v) {
+  const f = mtof(nota + vz.iv), fm = f * v.fmRatio;
+  o.osc.frequency.setTargetAtTime(f, t, tau);
+  o.mod.frequency.setTargetAtTime(fm, t, tau); o.modG.gain.setTargetAtTime(v.fmIndice * fm, t, tau);
+}
+// Síntesis aditiva: arma la onda sumando armónicos (amplitud 1/n^caída; los pares se pueden atenuar)
+let claveAdit = "", ondaAdit = null;
+function ondaAditiva(v, forzar) {
+  const n = Math.round(clamp(v.aditArm, 1, 40)), clave = n + "|" + v.aditPend.toFixed(2) + "|" + v.aditPares.toFixed(2);
+  if (clave === claveAdit && ondaAdit && !forzar) return null;
+  if (clave !== claveAdit || !ondaAdit) {
+    const re = new Float32Array(n + 1), im = new Float32Array(n + 1);
+    for (let h = 1; h <= n; h++) im[h] = Math.pow(h, -v.aditPend) * (h % 2 === 0 ? v.aditPares : 1);
+    ondaAdit = A.ctx.createPeriodicWave(re, im); claveAdit = clave;
+  }
+  return ondaAdit;
+}
+function refrescarAditiva() {
+  if (!A.ctx || !cfg.aj.voces.some(vz => vz.forma === "aditiva")) return;
+  const w = ondaAditiva(E.vals); if (!w) return;
+  A.voces.forEach((o, i) => { if (cfg.aj.voces[i] && cfg.aj.voces[i].forma === "aditiva") o.osc.setPeriodicWave(w); });
+}
+// Espacialización 3D: posición alrededor de quien escucha
+function posicion3d(v, t, k) {
+  const az = v.azimut * Math.PI / 180, el = v.elevacion * Math.PI / 180, d = v.distancia;
+  const x = Math.sin(az) * Math.cos(el) * d, y = Math.sin(el) * d, z = -Math.cos(az) * Math.cos(el) * d, p = A.p3d;
+  if (p.positionX) { p.positionX.setTargetAtTime(x, t, k); p.positionY.setTargetAtTime(y, t, k); p.positionZ.setTargetAtTime(z, t, k); } else p.setPosition(x, y, z);
+}
+function aplicarEspacio() {
+  if (!A.ctx) return; const t = A.ctx.currentTime, tres = cfg.aj.esp === "3d";
+  suave(A.esp2d.gain, tres ? 0 : 1, t, 0.05); suave(A.esp3d.gain, tres ? 1 : 0, t, 0.05);
+}
+// Síntesis cruzada: decide qué señal moldea a cuál
+async function rutaCruce() {
+  if (!A.ctx) return;
+  [A.sintesis, A.ruidoCar, A.micG].forEach(n => { if (!n) return; try { n.disconnect(A.vocMod); } catch (e) {} try { n.disconnect(A.vocCar); } catch (e) {} });
+  if (cfg.aj.cruce === "mic") {
+    A.sintesis.connect(A.vocCar);
+    if (!A.micG) {
+      $("estadoMic").textContent = "Pidiendo permiso para usar el micrófono…";
+      try {
+        const st = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+        A.micG = A.ctx.createGain(); A.micG.gain.value = 2; A.ctx.createMediaStreamSource(st).connect(A.micG);
+      } catch (e) { $("estadoMic").textContent = "No se pudo usar el micrófono (permiso denegado o no hay micrófono). Usa el modo «susurro»."; return; }
+    }
+    if (cfg.aj.cruce === "mic") { A.micG.connect(A.vocMod); $("estadoMic").textContent = "Micrófono activo: tu voz moldea a los osciladores. Usa audífonos para que no se acople."; }
+  } else {
+    A.sintesis.connect(A.vocMod); A.ruidoCar.connect(A.vocCar);
+    $("estadoMic").textContent = "";
+  }
+}
+function pulsar(fuerza) {
+  if (!A.cuerda || !(E.vals.cuerda > 0)) return;
+  A.cuerda.port.postMessage({ fuerza: fuerza || 0.8 });
+}
 function aplicarAjustes() {
   if (!A.ctx) return;
-  A.voces.forEach((o, i) => { if (cfg.aj.voces[i]) o.osc.type = cfg.aj.voces[i].forma; });
+  A.voces.forEach((o, i) => { const vz = cfg.aj.voces[i]; if (!vz) return; if (vz.forma === "aditiva") o.osc.setPeriodicWave(ondaAditiva(E.vals, true)); else o.osc.type = vz.forma; });
+  aplicarEspacio();
   A.filtro.type = cfg.aj.filtro;
   A.lfoT.type = cfg.aj.tremForma;
 }
@@ -787,9 +1003,15 @@ function notasArp(rango) {
   for (let o = 0; o < rango; o++) g.forEach(x => l.push(o * 12 + x));
   l.push(rango * 12); return l;
 }
+const Rep = { sig: 0 };
 function arpegiador() {
   if (!A.ctx) return;
   const t0 = A.ctx.currentTime, v = E.vals;
+  // Pulsaciones automáticas de la cuerda
+  if (v.cuerdaRep >= 0.05 && v.cuerda > 0 && puertaAbierta()) {
+    if (Rep.sig < t0) Rep.sig = t0;
+    if (Rep.sig < t0 + 0.03) { pulsar(0.5 + Math.random() * 0.5); Rep.sig += 1 / v.cuerdaRep; }
+  } else Rep.sig = t0;
   if (cfg.aj.arp === "off" || !puertaAbierta()) {
     if (E.arpOff !== 0 || A.arpGate.gain.value < 0.99) { E.arpOff = 0; suave(A.arpGate.gain, 1, t0, 0.01); actualizar(); }
     Arp.sig = t0; return;
@@ -805,7 +1027,8 @@ function arpegiador() {
     else i = Math.floor(Math.random() * n);
     Arp.paso++;
     const ts = Arp.sig, off = notas[i], base = cfg.aj.nota + cuantizar(v.altura) + off, gl = Math.max(0.002, v.glide / 3);
-    A.voces.forEach((o, k) => { const vz = cfg.aj.voces[k]; if (vz) o.osc.frequency.setTargetAtTime(mtof(base + vz.iv), ts, gl); });
+    A.voces.forEach((o, k) => { const vz = cfg.aj.voces[k]; if (vz) afinarVoz(o, vz, base, ts, gl, v); });
+    if (A.cuerda) { A.cuerda.parameters.get("frecuencia").setValueAtTime(mtof(base), ts); setTimeout(() => pulsar(0.8), Math.max(0, (ts - t0) * 1000)); }
     const g = A.arpGate.gain;
     g.setTargetAtTime(1, ts, 0.003);
     if (v.arpLargo < 0.97) g.setTargetAtTime(0, ts + dur * v.arpLargo, 0.012);
@@ -1036,6 +1259,7 @@ function moverXY(e) {
 xy.addEventListener("pointerdown", e => {
   e.preventDefault(); iniciarAudio(); xy.focus({ preventScroll: true }); xy.setPointerCapture(e.pointerId);
   E.tocando = true; xy.classList.add("tocando"); ultimoMov = null; moverXY(e); actualizarPuerta();
+  pulsar(0.6 + 0.4 * (e.pressure || 0.5));
 });
 xy.addEventListener("pointermove", e => { if (e.buttons || e.pointerType === "pen") moverXY(e); });
 const soltar = () => { E.tocando = false; E.p = 0; xy.classList.remove("tocando"); ultimoMov = null; actualizar(); actualizarPuerta(); };
@@ -1133,7 +1357,8 @@ function cargarPreset(p) {
   }
   cfg.preset = p.id;
   if (cfg.aj.puerta === "tocar") E.encendido = false;
-  if (A.ctx) { calcular(); crearVoces(); aplicarAjustes(); if (+antes.sala !== +cfg.aj.sala) A.conv.buffer = respuestaReverb(+cfg.aj.sala, 2.2); }
+  if (cfg.aj.sala === "archivo" && !A.irArchivo) cfg.aj.sala = 3.5;
+  if (A.ctx) { calcular(); crearVoces(); aplicarAjustes(); if (String(antes.sala) !== String(cfg.aj.sala)) A.conv.buffer = respuestaReverb(cfg.aj.sala, 2.2); if (antes.cruce !== cfg.aj.cruce) rutaCruce(); }
   guardarCfg(); dibujarTodo(); actualizar(); actualizarPuerta();
   $("msgPreset").textContent = "Cargado: " + p.nombre; setTimeout(() => $("msgPreset").textContent = "", 2000);
 }
@@ -1198,7 +1423,7 @@ $("btnResetBase").onclick = e => confirmar(e.currentTarget, "¿Seguro? Clic otra
 
 /* =================================================================== OSCILADORES */
 for (let m = 24; m <= 72; m++) $("ajNota").add(new Option(nombreNota(m) + " (MIDI " + m + ")", m));
-const FORMAS = { sawtooth: "Sierra", square: "Cuadrada", triangle: "Triángulo", sine: "Seno" };
+const FORMAS = { sawtooth: "Sierra", square: "Cuadrada", triangle: "Triángulo", sine: "Seno", aditiva: "Aditiva (armónicos)" };
 function dibujarVoces() {
   const cont = $("voces"); cont.innerHTML = "";
   const n = cfg.aj.voces.length;
@@ -1246,6 +1471,8 @@ function dibujarAjustes() {
   $("ajNota").value = cfg.aj.nota; $("ajEscala").value = cfg.aj.escala; $("ajPuerta").value = cfg.aj.puerta; $("ajResp").value = cfg.aj.resp;
   $("ajFiltro").value = cfg.aj.filtro; $("ajSala").value = cfg.aj.sala; $("ajBpm").value = cfg.aj.bpm; $("ajLuz").value = cfg.aj.luz; $("ajLuzPad").checked = cfg.aj.luzPad;
   $("ajArp").value = cfg.aj.arp; $("ajTremForma").value = cfg.aj.tremForma; $("ajSinc").checked = cfg.aj.sinc;
+  if (cfg.aj.sala === "archivo" && !A.irArchivo) cfg.aj.sala = 3.5;
+  $("ajSala").value = cfg.aj.sala; $("ajEsp").value = cfg.aj.esp; $("ajCruce").value = cfg.aj.cruce;
   dibujarVoces();
 }
 const ajuste = (id, clave, conv, despues) => $(id).addEventListener("change", e => {
@@ -1259,11 +1486,44 @@ ajuste("ajResp", "resp", Number);
 ajuste("ajFiltro", "filtro", String, aplicarAjustes);
 ajuste("ajTremForma", "tremForma", String, aplicarAjustes);
 ajuste("ajArp", "arp", String);
-ajuste("ajSala", "sala", Number, () => { if (A.ctx) A.conv.buffer = respuestaReverb(+cfg.aj.sala, 2.2); });
+ajuste("ajSala", "sala", v => isNaN(+v) ? v : +v, () => { if (A.ctx) A.conv.buffer = respuestaReverb(cfg.aj.sala, 2.2); });
 ajuste("ajBpm", "bpm", v => clamp(Math.round(+v), 40, 240));
 ajuste("ajLuz", "luz", String);
 ajuste("ajLuzPad", "luzPad");
 ajuste("ajSinc", "sinc");
+ajuste("ajEsp", "esp", String, aplicarEspacio);
+ajuste("ajCruce", "cruce", String, () => { iniciarAudio(); rutaCruce(); });
+
+/* =================================================================== MÉTODOS DE SÍNTESIS */
+const METODOS = [
+  { n: "Síntesis aditiva", d: "Suma de senos (armónicos) para construir un timbre. Elige la forma «Aditiva» en un oscilador y ajusta cuántos armónicos tiene, cuánto caen los agudos y cuánto suenan los pares.", donde: "Osciladores · Parámetros → Aditiva", preset: "Órgano aditivo" },
+  { n: "Síntesis sustractiva", d: "Parte de ondas ricas en armónicos (sierra, cuadrada, ruido) y les quita frecuencias con un filtro: pasa-bajos, pasa-banda, pasa-altos, rechaza-banda o realce, con resonancia y barrido.", donde: "Osciladores · Parámetros → Filtro", preset: "Filtro resonante" },
+  { n: "Síntesis RM y AM", d: "Modulación en anillo (RM): multiplica el sonido por otra onda y aparecen sumas y diferencias de frecuencias. Modulación de amplitud (AM): la ganancia oscila alrededor de 1, conservando la portadora. El trémolo es AM lenta.", donde: "Parámetros → Modulación", preset: "AM radio" },
+  { n: "Síntesis FM", d: "Un modulador cambia la frecuencia de cada oscilador. La razón entre modulador y portadora decide qué parciales aparecen (enteras: armónico; no enteras: metálico) y el índice, cuántos.", donde: "Parámetros → FM", preset: "Campana FM" },
+  { n: "Reverberación", d: "Simula un espacio con una respuesta al impulso (pieza, sala, catedral, placa, resorte, caverna) aplicada por convolución, más un eco sincronizado al tempo.", donde: "Efectos · Parámetros → Espacio", preset: "Placa metálica" },
+  { n: "Espacialización del sonido", d: "Paneo izquierda/derecha, posición de cada oscilador, ancho estéreo y paneo automático; o modo 3D binaural (HRTF) con dirección, altura y distancia, para escuchar con audífonos.", donde: "Aquí abajo · Parámetros → Espacio 3D", preset: "Órbita 3D" },
+  { n: "Convolución", d: "Cada muestra del sonido se reemplaza por una copia de una respuesta al impulso. Además de las salas generadas, puedes cargar cualquier archivo como respuesta al impulso: el instrumento sonará «a través» de él.", donde: "Aquí abajo · Efectos", preset: "Resorte" },
+  { n: "Síntesis cruzada", d: "Vocoder de 16 bandas: la envolvente espectral de una señal moldea a otra. En «susurro», los osciladores moldean al ruido; con micrófono, tu voz moldea a los osciladores (voz robótica).", donde: "Aquí abajo · Parámetros → Síntesis cruzada", preset: "Susurro" },
+  { n: "Síntesis por modelo físico", d: "Cuerda pulsada (Karplus-Strong): un ruido breve recorre un retardo del largo de un período de la nota y se filtra en cada vuelta, como una cuerda real que vibra y se apaga.", donde: "Aquí abajo · Parámetros → Cuerda", preset: "Cuerda pulsada" },
+];
+function dibujarMetodos() {
+  $("metodos").innerHTML = METODOS.map((m, i) => `<div class="metodo"><h3>${esc(m.n)} <span>✓ incluida</span></h3><p>${esc(m.d)}</p><p><b>Dónde:</b> ${esc(m.donde)}</p><button class="btn peq" data-metodo="${i}">Probar: ${esc(m.preset)}</button></div>`).join("");
+  document.querySelectorAll("[data-metodo]").forEach(b => b.onclick = () => {
+    const m = METODOS[+b.dataset.metodo], i = PRESETS.findIndex(p => p.nombre === m.preset); if (i < 0) return;
+    iniciarAudio(); $("selPreset").value = "b" + i; descPreset(); cargarPreset(listaPresets()[i]);
+    if (cfg.aj.puerta === "mantener" && !E.encendido) encender(true);
+  });
+}
+$("btnPulsar").onclick = () => { iniciarAudio(); pulsar(1); };
+$("archivoIr").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return; iniciarAudio(); $("estadoIr").textContent = "Cargando…";
+  try {
+    A.irArchivo = await A.ctx.decodeAudioData(await f.arrayBuffer());
+    $("optIrArchivo").disabled = false; cfg.aj.sala = "archivo"; $("ajSala").value = "archivo"; A.conv.buffer = A.irArchivo; guardarCfg();
+    $("estadoIr").textContent = "Respuesta al impulso: " + f.name + " (" + A.irArchivo.duration.toFixed(1) + " s). Sube «Envío a reverb» para escucharla.";
+  } catch (err) { $("estadoIr").textContent = "No se pudo leer ese archivo. Prueba con wav, mp3 u ogg."; }
+  e.target.value = "";
+};
 
 /* =================================================================== GUARDAR */
 function textoCfg() { return JSON.stringify({ tipo: "mtrackpad", version: 2, asign: cfg.asign.map(limpiarAsign), base: cfg.base, aj: cfg.aj }, (k, v) => typeof v === "number" ? +v.toPrecision(5) : v, 2); }
@@ -1275,7 +1535,7 @@ function copiar(txt, msg, area) {
 }
 function aplicarConfig(o) {
   cfg = normalizar({ asign: o.asign, base: o.base, aj: o.aj, preset: null });
-  if (A.ctx) { calcular(); crearVoces(); aplicarAjustes(); A.conv.buffer = respuestaReverb(+cfg.aj.sala, 2.2); }
+  if (A.ctx) { calcular(); crearVoces(); aplicarAjustes(); A.conv.buffer = respuestaReverb(cfg.aj.sala, 2.2); rutaCruce(); }
   guardarCfg(); dibujarTodo(); actualizar(); actualizarPuerta();
 }
 function aplicarTexto(txt, msg) {
@@ -1319,6 +1579,7 @@ document.addEventListener("keydown", e => {
   else if (k === "v" && !e.repeat) Luces.pantalla(!document.body.classList.contains("pantalla-completa"));
   else if (k === "g" && !e.repeat) grabar();
   else if (k === "t" && !e.repeat) todas();
+  else if (k === "c" && !e.repeat) { iniciarAudio(); pulsar(1); }
   else if (e.key === "ArrowUp") { e.preventDefault(); ponerXY(E.x, E.y + paso); }
   else if (e.key === "ArrowDown") { e.preventDefault(); ponerXY(E.x, E.y - paso); }
   else if (e.key === "ArrowRight") { e.preventDefault(); ponerXY(E.x + paso, E.y); }
@@ -1349,7 +1610,7 @@ function cuadro(now) {
   oscX.strokeStyle = colorAcento; oscX.lineWidth = 1.5 * devicePixelRatio; oscX.beginPath();
   for (let i = 0; i < 512; i++) { const x = i / 511 * w, y = h / 2 - (A.analizador ? datos[i] : 0) * h * 0.45; i ? oscX.lineTo(x, y) : oscX.moveTo(x, y); }
   oscX.stroke();
-  progresoPistas();
+  progresoPistas(); refrescarAditiva();
   if (now - ultimoTexto > 100) {
     ultimoTexto = now; const f = fuentes();
     $("lect").innerHTML = ["x", "y", "z", "r", "a", "v", "p"].map((s, i) => `<span style="color:${COLF[s]}">${FUENTES[s]} ${f[s].toFixed(2)}</span>${i % 2 ? "<br>" : " · "}`).join("") +
@@ -1362,6 +1623,7 @@ function cuadro(now) {
 
 /* =================================================================== INICIO */
 function dibujarTodo() { dibujarAjustes(); dibujarAsign(); dibujarBase(); dibujarPistas(); refrescarJson(); }
+dibujarMetodos();
 calcular(); dibujarPresets(typeof cfg.preset === "string" ? cfg.preset : "b0"); dibujarTodo();
 ponerXY(E.x, E.y); ponerZ(E.z); actualizarPuerta();
 requestAnimationFrame(cuadro);

@@ -21,6 +21,7 @@ Es una página web (`index.html`, más `presets.js` con los presets guardados), 
 | `Q` `E` o rueda del mouse sobre el recuadro | eje Z |
 | `G` | grabar / detener |
 | `T` | reproducir / detener todas las pistas |
+| `C` | pulsar la cuerda (modelo físico) |
 | `1`–`9` | reproducir / detener cada pista |
 | `F` | destello (sonido y luz) |
 | `V` | luces a pantalla completa, para proyectar |
@@ -49,6 +50,22 @@ Varias fuentes sobre un mismo parámetro se promedian; lo no asignado queda en s
 - **Efectos, en este orden:** filtro (5 tipos, con barrido automático) → distorsión paralela `tanh` → lo-fi (bits y resolución) → tono → modulador en anillo → phaser → trémolo (4 formas) → paneo automático → chorus estéreo → eco sincronizado al tempo y reverb (pieza, sala o catedral) → limitador.
 - **Calidad:** distorsión con sobremuestreo ×4 y curva de alta resolución, limitador transparente en vez de compresor, cambios de volumen sin clics. El lo-fi deja pasar la señal intacta cuando está apagado.
 
+## Métodos de síntesis
+
+La pestaña **Métodos de síntesis** resume cada uno, dónde está y un botón para probarlo:
+
+| Método | En MTrackpad |
+|---|---|
+| Síntesis aditiva | forma de onda «Aditiva» en los osciladores: suma de armónicos con número, caída de agudos y nivel de los pares asignables |
+| Síntesis sustractiva | osciladores ricos (sierra, cuadrada, ruido) + filtro de 5 tipos con resonancia y barrido |
+| Síntesis RM y AM | modulador en anillo (multiplica) y modulación de amplitud a frecuencias audibles; el trémolo es AM lenta |
+| Síntesis FM | un modulador por oscilador, con razón modulador/portadora e índice asignables |
+| Reverberación | convolución con pieza, sala, catedral, placa metálica, resorte o caverna, más eco |
+| Espacialización | paneo, posición de cada oscilador, ancho, paneo automático y modo 3D binaural (HRTF: dirección, altura, distancia) |
+| Convolución | además de las salas, se puede cargar cualquier archivo como respuesta al impulso |
+| Síntesis cruzada | vocoder de 16 bandas: los osciladores moldean un ruido («susurro») o tu voz por micrófono moldea a los osciladores |
+| Modelo físico | cuerda pulsada Karplus-Strong, con brillo, duración y pulsaciones automáticas |
+
 ## Pistas grabadas
 
 - Cada grabación queda como una pista con reproducir/parar, bucle, silenciar, volumen y descarga en **WAV de 24 bits** (sin compresión, a la frecuencia de muestreo de la tarjeta de sonido).
@@ -62,7 +79,7 @@ Cuatro dibujos (manchas, anillos que pulsan con los golpes, espectro del sonido 
 
 ## Presets
 
-Incluidos: *Drone filtrado*, *Theremin*, *Filtro resonante*, *Respiración*, *Muro de distorsión*, *Coro y eco*, *Oleaje*, *Gesto*, *Arpegio cristal*, *Campanas en anillo*, *Phaser espacial*, *8 bits*, *Sirena*, *Izquierda y derecha* y *Pulso rítmico*.
+Incluidos (26): *Drone filtrado*, *Theremin*, *Filtro resonante*, *Respiración*, *Muro de distorsión*, *Coro y eco*, *Oleaje*, *Gesto*, *Arpegio cristal*, *Campanas en anillo*, *Phaser espacial*, *8 bits*, *Sirena*, *Izquierda y derecha*, *Órgano aditivo*, *FM eléctrico*, *Campana FM*, *AM radio*, *Cuerda pulsada*, *Lluvia de cuerdas*, *Susurro*, *Vocoder (micrófono)*, *Órbita 3D*, *Placa metálica*, *Resorte* y *Pulso rítmico*.
 Puedes guardar los tuyos con **Guardar como preset**; quedan en ese navegador. Para que queden **guardados en la página** y aparezcan en cualquier computador:
 
 1. Presiona **⬇ Guardar mis presets en la página**: se descarga `presets.js` con los presets de la página más los tuyos.
