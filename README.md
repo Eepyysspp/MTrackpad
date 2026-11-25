@@ -4,7 +4,7 @@
 Un recuadro XY, un eje Z y los gestos que haces sobre él controlan un sintetizador, una cadena de efectos y luces para proyectar.
 Todo lo que controla cada eje se puede reasignar, y lo que tocas se puede grabar en pistas que siguen sonando mientras tocas encima: así se arma una obra completa dentro del mismo instrumento.
 
-Es una sola página web (`index.html`), sin instalación, sin dependencias y sin internet: funciona en Chrome, Edge, Safari o Firefox de escritorio.
+Es una página web (`index.html`, más `presets.js` con los presets guardados), sin instalación, sin dependencias y sin internet: funciona en Chrome, Edge, Safari o Firefox de escritorio.
 
 **Página:** <https://eepyysspp.github.io/MTrackpad/>
 
@@ -41,7 +41,8 @@ Varias fuentes sobre un mismo parámetro se promedian; lo no asignado queda en s
 
 ## Sonido
 
-- **Osciladores:** de 1 a 8, que se agregan o quitan. Cada uno tiene forma de onda (sierra, cuadrada, triángulo, seno), **intervalo** en semitonos respecto a la nota que tocas (0 = la misma nota, 7 = quinta, 12 = octava arriba, −12 = octava abajo) y **ajuste fino** en cents (100 ¢ = 1 semitono). Más ruido, desafinación en abanico, ancho estéreo, glide y vibrato.
+- **Osciladores:** de 1 a 8, que se agregan o quitan. Cada uno tiene forma de onda (sierra, cuadrada, triángulo, seno), **intervalo** en semitonos respecto a la nota que tocas (0 = la misma nota, 7 = quinta, 12 = octava arriba, −12 = octava abajo), **ajuste fino** en cents (100 ¢ = 1 semitono) y **posición** en el estéreo (de todo a la izquierda a todo a la derecha). Más ruido, desafinación en abanico, ancho estéreo, glide y vibrato.
+- **Paneo:** el parámetro *Paneo* lleva todo el sonido hacia la izquierda o la derecha, en cualquier grado (100 % izq., centro, 100 % der.), y se puede asignar a un eje; el *paneo automático* lo mueve solo entre los parlantes.
 - **Altura:** nota base y un parámetro *Altura* (±24 semitonos) que puede ajustarse a una escala (cromática, mayor, menor, pentatónicas, blues, dórica, frigia, tonos enteros).
 - **Arpegiador:** sube, baja, sube y baja o al azar por la escala, sincronizado al tempo, con velocidad, rango y largo de nota asignables.
 - **Puerta:** suena encendido/apagado, o solo mientras tocas el recuadro, con ataque y suelta.
@@ -61,5 +62,11 @@ Cuatro dibujos (manchas, anillos que pulsan con los golpes, espectro del sonido 
 
 ## Presets
 
-Incluidos: *Drone filtrado*, *Theremin*, *Filtro resonante*, *Respiración*, *Muro de distorsión*, *Coro y eco*, *Oleaje*, *Gesto*, *Arpegio cristal*, *Campanas en anillo*, *Phaser espacial*, *8 bits*, *Sirena* y *Pulso rítmico*.
-Puedes guardar los tuyos. La configuración completa se guarda sola en el navegador y se puede pasar a otro computador como texto o archivo `.json` (pestaña *Guardar*).
+Incluidos: *Drone filtrado*, *Theremin*, *Filtro resonante*, *Respiración*, *Muro de distorsión*, *Coro y eco*, *Oleaje*, *Gesto*, *Arpegio cristal*, *Campanas en anillo*, *Phaser espacial*, *8 bits*, *Sirena*, *Izquierda y derecha* y *Pulso rítmico*.
+Puedes guardar los tuyos con **Guardar como preset**; quedan en ese navegador. Para que queden **guardados en la página** y aparezcan en cualquier computador:
+
+1. Presiona **⬇ Guardar mis presets en la página**: se descarga `presets.js` con los presets de la página más los tuyos.
+2. Reemplaza `presets.js` en esta carpeta (junto a `index.html`).
+3. Haz commit y push. Aparecen en el grupo *Guardados en la página*, también al abrir `index.html` sin internet.
+
+La configuración completa del momento se puede pasar además como texto o archivo `.json` (pestaña *Guardar*).
