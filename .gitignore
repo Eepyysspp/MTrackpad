@@ -1,4 +1,1 @@
-sonidos/*.wav
-sonidos/*.mp3
-sonidos/*.ogg
-sonidos/*.flac
+.DS_Store

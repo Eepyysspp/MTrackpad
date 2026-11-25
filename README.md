@@ -1,28 +1,29 @@
 # MTrackpad
 
 **MTrackpad** (*musical trackpad*) es un instrumento que se toca con el trackpad, el mouse o una pantalla táctil.
-Un recuadro XY, un eje Z y los gestos que haces sobre él controlan un sintetizador, cuatro ranuras de muestras, una cadena de efectos y luces para proyectar.
-Todo lo que controla cada eje se puede reasignar.
+Un recuadro XY, un eje Z y los gestos que haces sobre él controlan un sintetizador, una cadena de efectos y luces para proyectar.
+Todo lo que controla cada eje se puede reasignar, y lo que tocas se puede grabar en pistas que siguen sonando mientras tocas encima: así se arma una obra completa dentro del mismo instrumento.
 
-Es una sola página web (`index.html`), sin instalación ni dependencias: funciona en Chrome, Edge o Firefox de escritorio.
+Es una sola página web (`index.html`), sin instalación, sin dependencias y sin internet: funciona en Chrome, Edge, Safari o Firefox de escritorio.
 
-**Página:** <https://eepyysspp.github.io/MTrackpad/> (después de activar GitHub Pages).
+**Página:** <https://eepyysspp.github.io/MTrackpad/>
 
 ## Tocar
 
 1. Presiona **Encender** (o `Espacio`) y arrastra en el recuadro.
 2. Elige un preset arriba a la derecha para empezar.
-3. **Grabar** (`G`) graba lo que suena y lo deja para escuchar y descargar.
+3. **Grabar** (`G`) graba lo que tocas en una pista nueva. Las pistas pueden sonar en bucle mientras grabas otra capa encima.
 
 | Tecla | Acción |
 |---|---|
 | `Espacio` | encender / apagar (en modo «al tocar», mantener para que suene) |
 | `←` `→` / `↑` `↓` | mover X / Y (`Shift` = pasos finos) |
 | `Q` `E` o rueda del mouse sobre el recuadro | eje Z |
-| `1`–`4` | disparar las muestras en modo disparo |
+| `G` | grabar / detener |
+| `T` | reproducir / detener todas las pistas |
+| `1`–`9` | reproducir / detener cada pista |
 | `F` | destello (sonido y luz) |
 | `V` | luces a pantalla completa, para proyectar |
-| `G` | grabar / detener |
 
 ## Fuentes de control
 
@@ -40,27 +41,25 @@ Varias fuentes sobre un mismo parámetro se promedian; lo no asignado queda en s
 
 ## Sonido
 
-- **Osciladores:** cuatro, cada uno con su forma de onda (sierra, cuadrada, triángulo, seno) y su intervalo en semitonos, más **ruido**. Desafinación en abanico, ancho estéreo y glide.
-- **Altura:** nota base y un parámetro *Altura* (±24 semitonos) que puede ajustarse a una escala (cromática, mayor, menor, pentatónicas, blues, dórica): asígnalo a un eje para tocar melodías.
+- **Osciladores:** de 1 a 8, que se agregan o quitan. Cada uno tiene forma de onda (sierra, cuadrada, triángulo, seno), **intervalo** en semitonos respecto a la nota que tocas (0 = la misma nota, 7 = quinta, 12 = octava arriba, −12 = octava abajo) y **ajuste fino** en cents (100 ¢ = 1 semitono). Más ruido, desafinación en abanico, ancho estéreo, glide y vibrato.
+- **Altura:** nota base y un parámetro *Altura* (±24 semitonos) que puede ajustarse a una escala (cromática, mayor, menor, pentatónicas, blues, dórica, frigia, tonos enteros).
+- **Arpegiador:** sube, baja, sube y baja o al azar por la escala, sincronizado al tempo, con velocidad, rango y largo de nota asignables.
 - **Puerta:** suena encendido/apagado, o solo mientras tocas el recuadro, con ataque y suelta.
-- **Muestras (M1–M4):** carga tus archivos o genera un ejemplo (acorde de pad, campana, viento, bombo, vocal). Cada ranura suena como:
-  - **loop**, transpuesto con la altura;
-  - **nube granular**: granos de la grabación con posición, tamaño, densidad y dispersión asignables;
-  - **disparo**: suena entera con `1`–`4`, su botón o al tocar el recuadro.
-- **Efectos, en este orden:** filtro (pasa-bajos, pasa-banda, pasa-altos, rechaza-banda o realce, con barrido automático) → distorsión paralela `tanh` con dureza y tono → trémolo → chorus estéreo → eco sincronizado al tempo y reverb (pieza, sala o catedral) → compresor.
+- **Efectos, en este orden:** filtro (5 tipos, con barrido automático) → distorsión paralela `tanh` → lo-fi (bits y resolución) → tono → modulador en anillo → phaser → trémolo (4 formas) → paneo automático → chorus estéreo → eco sincronizado al tempo y reverb (pieza, sala o catedral) → limitador.
+- **Calidad:** distorsión con sobremuestreo ×4 y curva de alta resolución, limitador transparente en vez de compresor, cambios de volumen sin clics. El lo-fi deja pasar la señal intacta cuando está apagado.
+
+## Pistas grabadas
+
+- Cada grabación queda como una pista con reproducir/parar, bucle, silenciar, volumen y descarga en **WAV de 24 bits** (sin compresión, a la frecuencia de muestreo de la tarjeta de sonido).
+- Con la opción de sincronizar, al empezar a grabar las pistas que suenan vuelven al comienzo, así la capa nueva queda alineada con las anteriores.
+- **⬇ Mezcla (WAV)** junta todas las pistas no silenciadas en un solo archivo.
+- Las pistas viven solo mientras la página está abierta: descárgalas antes de cerrarla.
 
 ## Luces
 
-Cuatro dibujos (manchas, anillos que pulsan con los golpes, espectro del sonido y cortina de color plano). El color, la saturación, la intensidad, la velocidad, el tamaño y la reacción al sonido son parámetros asignables como cualquier otro.
+Cuatro dibujos (manchas, anillos que pulsan con los golpes, espectro del sonido y cortina de color plano). El color, la saturación, la intensidad, la velocidad, el tamaño y la reacción al sonido son parámetros asignables. Reaccionan también a las pistas que suenan.
 
 ## Presets
 
-Incluidos: *Drone filtrado*, *Theremin*, *Filtro resonante*, *Respiración*, *Muro de distorsión*, *Nube granular*, *Coro y eco*, *Oleaje* y *Gesto*.
+Incluidos: *Drone filtrado*, *Theremin*, *Filtro resonante*, *Respiración*, *Muro de distorsión*, *Coro y eco*, *Oleaje*, *Gesto*, *Arpegio cristal*, *Campanas en anillo*, *Phaser espacial*, *8 bits*, *Sirena* y *Pulso rítmico*.
 Puedes guardar los tuyos. La configuración completa se guarda sola en el navegador y se puede pasar a otro computador como texto o archivo `.json` (pestaña *Guardar*).
-Para cargar muestras propias automáticamente, ver [`sonidos/LEEME.md`](sonidos/LEEME.md).
-
-## Publicar en GitHub Pages
-
-1. Crea en GitHub el repositorio vacío **MTrackpad** (sin README).
-2. En esta carpeta: `git add .`, `git commit -m "MTrackpad"` y `git push -u origin main`.
-3. En el repositorio: *Settings → Pages → Deploy from a branch → main / (root)*.

@@ -3,30 +3,28 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="MTrackpad: instrumento musical para el trackpad o el mouse, con síntesis, muestras, efectos y luces.">
+<meta name="description" content="MTrackpad: instrumento musical para el trackpad o el mouse, con síntesis, efectos, luces y grabación por capas.">
 <title>MTrackpad</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
-/* Layout: barra con la marca y los controles de escena · columna del instrumento (recuadro, Z, osciloscopio, muestras) · columna de configuración por pestañas. Las luces pintan el fondo detrás de todo. */
+/* Layout: barra con la marca y el estado · columna del instrumento (recuadro, Z, osciloscopio, pistas grabadas) · columna de configuración por pestañas. Las luces pintan el fondo detrás de todo. Funciona sin internet: sin fuentes ni librerías externas. */
 :root{
   color-scheme:dark;
   --bg:#0a0c12; --panel:rgba(17,20,30,.86); --panel2:rgba(255,255,255,.045); --campo:rgba(0,0,0,.4);
   --text:#ebeef5; --muted:#9097ab; --accent:#ffb547; --accent2:#6ad1ff; --tinta:#1a1203;
-  --border:rgba(255,255,255,.1); --peligro:#ff5d6c;
+  --border:rgba(255,255,255,.1); --peligro:#ff5d6c; --ok:#4ade80;
   --x:#ffb547; --y:#6ad1ff; --z:#c39bff; --r:#5eead4; --a:#ff8fb8; --v:#a3e635; --p:#f8fafc;
-  --display:"Sora",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --display:"Avenir Next","Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,sans-serif;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,Helvetica,Arial,sans-serif;
-  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --mono:"SF Mono",ui-monospace,Menlo,Consolas,"Liberation Mono",monospace;
   --radius:14px;
 }
 *{box-sizing:border-box}
-html,body{background:var(--bg);color:var(--text)}
+html,body{background:var(--bg);color:var(--text);margin:0}
 body{font:15px/1.5 var(--sans)}
 button,select,input,textarea{font:inherit;color:inherit}
 h1,h2,h3{margin:0;line-height:1.15;text-wrap:balance}
 p{margin:0}
+[hidden]{display:none!important}
 .muted{color:var(--muted)} .small{font-size:13px}
 canvas#luces{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
 .contenido{position:relative;z-index:1}
@@ -43,7 +41,7 @@ canvas#luces{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:blo
 .estado.on{background:var(--accent);color:var(--tinta);border-color:transparent}
 .estado.rec{background:var(--peligro);color:#fff;border-color:transparent}
 
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 13px;border-radius:11px;border:1px solid var(--border);background:rgba(255,255,255,.06);cursor:pointer;font-weight:600;font-size:14px;color:var(--text);user-select:none;touch-action:manipulation}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 13px;border-radius:11px;border:1px solid var(--border);background:rgba(255,255,255,.06);cursor:pointer;font-weight:600;font-size:14px;color:var(--text);user-select:none;-webkit-user-select:none;touch-action:manipulation;text-decoration:none}
 .btn:hover{background:rgba(255,255,255,.12)}
 .btn:disabled{opacity:.45;cursor:default}
 .btn:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,.xy:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
@@ -82,16 +80,24 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .dest{font-size:12px;color:var(--muted);line-height:1.5}
 .dest b{font-family:var(--mono)}
 canvas#osc{width:100%;height:56px;display:block;border-radius:10px;background:var(--campo);border:1px solid var(--border)}
-.slots{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
-.slot-btn{display:flex;flex-direction:column;align-items:flex-start;gap:0;padding:7px 9px;border-radius:10px;border:1px solid var(--border);background:var(--panel2);cursor:pointer;text-align:left;min-width:0}
-.slot-btn b{font:700 13px var(--mono)}
-.slot-btn span{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.slot-btn.vacio{opacity:.55}
-.slot-btn.golpe{background:var(--accent);color:var(--tinta)}
-.slot-btn.golpe span{color:var(--tinta)}
 .ayuda{font-size:12.5px;color:var(--muted);line-height:1.85}
-.toma{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.toma audio{height:34px;max-width:100%}
+
+/* Pistas grabadas */
+.pistas{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border);padding-top:12px}
+.pistas h2{font:700 15px var(--display);display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.pistas h2 small{font:500 12px var(--sans);color:var(--muted)}
+.pista{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 8px;align-items:center;padding:8px 10px;border-radius:10px;background:var(--panel2);border:1px solid var(--border)}
+.pista.suena{border-color:var(--ok)}
+.pista.silenciada{opacity:.55}
+.pista .nom{display:flex;flex-direction:column;min-width:0}
+.pista .nom input{background:none;border:none;padding:0;font-weight:600;font-size:14px;width:100%}
+.pista .nom span{font:500 11px var(--mono);color:var(--muted)}
+.pista .ctrl{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pista .ctrl input[type=range]{flex:1 1 90px;width:auto}
+.pista .barrita{grid-column:1 / -1;height:3px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden}
+.pista .barrita i{display:block;height:100%;width:0;background:var(--ok)}
+.play{width:34px;height:34px;padding:0;border-radius:50%}
+.vacio{font-size:13px;color:var(--muted)}
 
 .tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:14px}
 .tabs button{background:none;border:1px solid transparent;border-radius:9px;padding:6px 12px;cursor:pointer;font-weight:600;color:var(--muted)}
@@ -133,16 +139,21 @@ canvas#osc{width:100%;height:56px;display:block;border-radius:10px;background:va
 
 .ajustes{display:grid;gap:10px 18px;grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
 .ajustes label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
-.check{display:flex!important;flex-direction:row!important;gap:8px;align-items:flex-start;color:var(--text)!important}
+.check{display:flex!important;flex-direction:row!important;gap:8px;align-items:flex-start;color:var(--text)!important;font-size:13px}
 .check input{margin-top:3px}
-.voces{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
-.voz{display:grid;grid-template-columns:auto minmax(0,1fr) 74px;gap:6px;align-items:center;padding:8px;border-radius:10px;background:var(--panel2);border:1px solid var(--border);font-size:13px}
+.voces{display:flex;flex-direction:column;gap:6px}
+.voz{display:grid;grid-template-columns:64px minmax(110px,1fr) 118px 100px minmax(120px,1.3fr) 26px;gap:8px;align-items:center;padding:7px 8px;border-radius:10px;background:var(--panel2);border:1px solid var(--border);font-size:13px}
+.voz-cab{display:grid;grid-template-columns:64px minmax(110px,1fr) 118px 100px minmax(120px,1.3fr) 26px;gap:8px;padding:0 8px;font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)}
 .voz b{font-family:var(--mono);color:var(--accent)}
-.slot{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:12px;background:var(--panel2);border:1px solid var(--border)}
-.slot h3{font:700 15px var(--display);display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
-.slot h3 small{font:500 12px var(--sans);color:var(--accent2)}
-.slots-cfg{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
-.slot .ajustes{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+.voz label{display:flex;align-items:center;gap:4px;color:var(--muted);font-size:12px}
+.voz input[type=number]{width:62px}
+.voz .res{font-size:12px;color:var(--text);line-height:1.3}
+.voz .res small{display:block;color:var(--muted)}
+@media (max-width:760px){
+  .voz-cab{display:none}
+  .voz{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"n f x" "iv fi fi" "res res res"}
+  .voz>:nth-child(1){grid-area:n} .voz>:nth-child(2){grid-area:f} .voz>:nth-child(3){grid-area:iv} .voz>:nth-child(4){grid-area:fi} .voz>:nth-child(5){grid-area:res} .voz>:nth-child(6){grid-area:x}
+}
 textarea{width:100%;min-height:110px;font:12px/1.45 var(--mono);resize:vertical}
 .msg{font-size:12.5px;color:var(--accent2)}
 
@@ -161,11 +172,11 @@ textarea{width:100%;min-height:110px;font:12px/1.45 var(--mono);resize:vertical}
     <div class="in">
       <div class="marca">
         <h1>M<span>Trackpad</span></h1>
-        <small>musical trackpad · síntesis · muestras · efectos · luces</small>
+        <small>musical trackpad · síntesis · efectos · luces · capas</small>
       </div>
       <div class="escena">
         <span class="estado" id="estPuerta">SILENCIO</span>
-        <span class="estado" id="estRec" hidden>● GRABANDO 0:00</span>
+        <span class="estado rec" id="estRec" hidden>● GRABANDO 0:00</span>
         <select id="selPresetBarra" aria-label="Preset rápido"></select>
       </div>
     </div>
@@ -195,9 +206,20 @@ textarea{width:100%;min-height:110px;font:12px/1.45 var(--mono);resize:vertical}
         </div>
         <div class="dest" id="destOtros"></div>
         <canvas id="osc" aria-hidden="true"></canvas>
-        <div class="slots" id="slotsRapidos"></div>
-        <div class="toma" id="toma" hidden></div>
-        <p class="ayuda"><kbd>Espacio</kbd> encender (en modo «al tocar», mantener) · <kbd>←</kbd><kbd>→</kbd> X · <kbd>↑</kbd><kbd>↓</kbd> Y (<kbd>Shift</kbd> fino) · <kbd>Q</kbd><kbd>E</kbd> o rueda sobre el recuadro: Z · <kbd>1</kbd>–<kbd>4</kbd> disparar muestras · <kbd>F</kbd> destello · <kbd>V</kbd> luces a pantalla completa · <kbd>G</kbd> grabar</p>
+
+        <div class="pistas">
+          <h2>Pistas grabadas <small id="pistasInfo">capas para armar una obra</small></h2>
+          <div class="fila">
+            <button class="btn peq" id="btnTodas">▶ Todas <kbd>T</kbd></button>
+            <button class="btn peq" id="btnDetTodas">■ Detener todas</button>
+            <button class="btn peq" id="btnMezcla">⬇ Mezcla (WAV)</button>
+          </div>
+          <label class="check"><input type="checkbox" id="ajSinc"> <span>Al grabar, reiniciar desde el comienzo las pistas que están sonando (para grabar una capa nueva sincronizada encima)</span></label>
+          <div id="listaPistas"></div>
+          <span class="msg" id="msgPistas"></span>
+        </div>
+
+        <p class="ayuda"><kbd>Espacio</kbd> encender (en modo «al tocar», mantener) · <kbd>←</kbd><kbd>→</kbd> X · <kbd>↑</kbd><kbd>↓</kbd> Y (<kbd>Shift</kbd> fino) · <kbd>Q</kbd><kbd>E</kbd> o rueda sobre el recuadro: Z · <kbd>F</kbd> destello · <kbd>V</kbd> luces a pantalla completa · <kbd>G</kbd> grabar · <kbd>T</kbd> todas las pistas · <kbd>1</kbd>–<kbd>9</kbd> reproducir o parar cada pista</p>
       </section>
 
       <!-- ============ Configuración ============ -->
@@ -206,7 +228,7 @@ textarea{width:100%;min-height:110px;font:12px/1.45 var(--mono);resize:vertical}
           <button role="tab" data-tab="ejes" aria-selected="true">Ejes</button>
           <button role="tab" data-tab="base" aria-selected="false">Parámetros</button>
           <button role="tab" data-tab="fuente" aria-selected="false">Osciladores y altura</button>
-          <button role="tab" data-tab="muestras" aria-selected="false">Muestras</button>
+          <button role="tab" data-tab="efectos" aria-selected="false">Efectos</button>
           <button role="tab" data-tab="luces" aria-selected="false">Luces</button>
           <button role="tab" data-tab="guardar" aria-selected="false">Guardar</button>
         </div>
@@ -258,13 +280,31 @@ textarea{width:100%;min-height:110px;font:12px/1.45 var(--mono);resize:vertical}
 
         <!-- Osciladores y altura -->
         <div data-panel="fuente" hidden>
+          <div class="sub">Osciladores</div>
+          <p class="nota" style="margin-bottom:10px">Cada oscilador suena a la vez que los demás. El <b>intervalo</b> es la distancia en <b>semitonos</b> respecto a la nota que estás tocando: 0 = la misma nota, 7 = una quinta arriba, 12 = una octava arriba, −12 = una octava abajo. El <b>ajuste fino</b> está en cents (100 ¢ = 1 semitono): unos pocos cents desafinan apenas y hacen el sonido más ancho. A la derecha ves qué nota suena con la nota base actual. El volumen de cada uno está en <i>Parámetros → Osciladores</i> y se puede asignar a los ejes.</p>
+          <div class="voz-cab"><span>Osc.</span><span>Forma</span><span>Intervalo</span><span>Ajuste fino</span><span>Suena</span><span></span></div>
+          <div class="voces" id="voces"></div>
+          <div class="fila" style="margin-top:8px">
+            <button class="btn peq" id="btnAgregarVoz">+ Añadir oscilador</button>
+            <span class="nota" id="vocesInfo"></span>
+          </div>
+
           <div class="sub">Altura</div>
           <div class="ajustes">
             <label>Nota base<select id="ajNota"></select></label>
-            <label>Escala del parámetro «Altura»
-              <select id="ajEscala"><option value="cont">Continua (sin escala)</option><option value="crom">Cromática</option><option value="mayor">Mayor</option><option value="menor">Menor natural</option><option value="penta">Pentatónica mayor</option><option value="pentam">Pentatónica menor</option><option value="blues">Blues</option><option value="dorica">Dórica</option></select></label>
+            <label>Escala del parámetro «Altura» y del arpegiador
+              <select id="ajEscala"><option value="cont">Continua (sin escala)</option><option value="crom">Cromática</option><option value="mayor">Mayor</option><option value="menor">Menor natural</option><option value="penta">Pentatónica mayor</option><option value="pentam">Pentatónica menor</option><option value="blues">Blues</option><option value="dorica">Dórica</option><option value="frigia">Frigia</option><option value="tonos">Tonos enteros</option></select></label>
           </div>
           <p class="nota" style="margin-top:6px">Asigna <b>Altura</b> a un eje para tocar melodías; con una escala, el valor salta a la nota más cercana de la escala sobre la nota base y el <b>glide</b> decide qué tan ligado suena.</p>
+
+          <div class="sub">Arpegiador</div>
+          <div class="ajustes">
+            <label>Dirección
+              <select id="ajArp"><option value="off">Apagado</option><option value="sube">Sube</option><option value="baja">Baja</option><option value="subebaja">Sube y baja</option><option value="azar">Al azar</option></select></label>
+            <label>Tempo (BPM, también para el eco)<input type="number" id="ajBpm" min="40" max="240" step="1"></label>
+          </div>
+          <p class="nota" style="margin-top:6px">Recorre las notas de la escala (o un acorde mayor, si la escala es continua) sobre la nota que tocas. La velocidad, el rango y el largo de cada nota están en <i>Parámetros → Arpegiador</i>.</p>
+
           <div class="sub">Puerta</div>
           <div class="ajustes">
             <label>Cuándo suena
@@ -272,23 +312,21 @@ textarea{width:100%;min-height:110px;font:12px/1.45 var(--mono);resize:vertical}
             <label>Respuesta del recuadro (suavizado)
               <select id="ajResp"><option value="0.015">Inmediata (15 ms)</option><option value="0.05">Normal (50 ms)</option><option value="0.15">Lenta (150 ms)</option><option value="0.5">Muy lenta (0,5 s)</option></select></label>
           </div>
-          <p class="nota" style="margin-top:6px">El <b>ataque</b> y la <b>suelta</b> de la puerta están en <i>Parámetros → Envolvente</i>.</p>
-          <div class="sub">Osciladores</div>
-          <div class="voces" id="voces"></div>
-          <div class="sub">Efectos</div>
+        </div>
+
+        <!-- Efectos -->
+        <div data-panel="efectos" hidden>
+          <p class="nota" style="margin-bottom:10px">Orden de la cadena: puerta → filtro → distorsión → lo-fi → tono → modulador en anillo → phaser → trémolo → paneo automático → chorus → eco y reverb → limitador. Los valores de cada efecto están en <i>Parámetros</i>; aquí se eligen sus formas.</p>
           <div class="ajustes">
             <label>Tipo de filtro
               <select id="ajFiltro"><option value="lowpass">Pasa-bajos</option><option value="bandpass">Pasa-banda</option><option value="highpass">Pasa-altos</option><option value="notch">Rechaza-banda</option><option value="peaking">Realce (+12 dB)</option></select></label>
+            <label>Forma del trémolo
+              <select id="ajTremForma"><option value="sine">Seno (suave)</option><option value="triangle">Triángulo</option><option value="square">Cuadrada (corta el sonido)</option><option value="sawtooth">Sierra</option></select></label>
             <label>Tamaño de la reverb
               <select id="ajSala"><option value="1.4">Pieza (1,4 s)</option><option value="3.5">Sala (3,5 s)</option><option value="7">Catedral (7 s)</option></select></label>
-            <label>Tempo del eco (BPM)<input type="number" id="ajBpm" min="40" max="240" step="1"></label>
           </div>
-        </div>
-
-        <!-- Muestras -->
-        <div data-panel="muestras" hidden>
-          <p class="nota" style="margin-bottom:10px">Cuatro ranuras (M1 a M4). Carga un archivo de audio (wav, mp3, ogg) o genera un ejemplo. Cada una puede sonar como <b>loop</b>, como <b>nube granular</b> (granos de la grabación cuya posición, tamaño, densidad y dispersión puedes asignar a los ejes) o como <b>disparo</b> (suena entera con <kbd>1</kbd>–<kbd>4</kbd>, el botón de la ranura o al tocar el recuadro). Los loops y las nubes pasan por la puerta; los disparos suenan siempre. Todas pasan por el filtro y los efectos.</p>
-          <div class="slots-cfg" id="slotsCfg"></div>
+          <div class="sub">Calidad</div>
+          <p class="nota">La síntesis corre a la frecuencia de muestreo de tu tarjeta de sonido (<span id="infoSr">44,1 o 48 kHz</span>), la distorsión usa sobremuestreo ×4 para no generar aliasing y la salida pasa por un limitador transparente en vez de un compresor. Las grabaciones se guardan sin compresión, en WAV de 24 bits.</p>
         </div>
 
         <!-- Luces -->
@@ -298,12 +336,12 @@ textarea{width:100%;min-height:110px;font:12px/1.45 var(--mono);resize:vertical}
               <select id="ajLuz"><option value="manchas">Manchas de color</option><option value="anillos">Anillos (pulsan con los golpes)</option><option value="espectro">Espectro del sonido</option><option value="cortina">Cortina (color plano)</option></select></label>
             <label class="check"><input type="checkbox" id="ajLuzPad"> <span>Teñir también el recuadro</span></label>
           </div>
-          <p class="nota" style="margin-top:10px">El color, la intensidad, la velocidad, el tamaño y la reacción al sonido son parámetros como cualquier otro: puedes fijarlos en <i>Parámetros → Luces</i> o asignarlos a los ejes (por ejemplo, <b style="color:var(--a)">A</b> → tono del color da una rueda cromática al girar alrededor del centro). Con <kbd>V</kbd> las luces ocupan toda la pantalla para proyectarlas; clic en ellas o <kbd>F</kbd> hace un destello.</p>
+          <p class="nota" style="margin-top:10px">El color, la intensidad, la velocidad, el tamaño y la reacción al sonido son parámetros como cualquier otro: puedes fijarlos en <i>Parámetros → Luces</i> o asignarlos a los ejes (por ejemplo, <b style="color:var(--a)">A</b> → color da una rueda cromática al girar alrededor del centro). Las luces también reaccionan a las pistas grabadas que están sonando. Con <kbd>V</kbd> ocupan toda la pantalla para proyectarlas; clic en ellas o <kbd>F</kbd> hace un destello.</p>
         </div>
 
         <!-- Guardar -->
         <div data-panel="guardar" hidden>
-          <p class="nota" style="margin-bottom:10px">La configuración completa (asignaciones, parámetros, osciladores, modos de las ranuras y luces) se guarda sola en este navegador. Los archivos de audio no se guardan: vuelve a cargarlos. Para pasar la configuración a otro computador, copia el texto y pégalo allá con <b>Aplicar</b>, o abre un archivo .json.</p>
+          <p class="nota" style="margin-bottom:10px">La configuración completa (asignaciones, parámetros, osciladores, efectos y luces) se guarda sola en este navegador. Las pistas grabadas no: descárgalas en WAV antes de cerrar la página. Para pasar la configuración a otro computador, copia el texto y pégalo allá con <b>Aplicar</b>, o descarga y abre un archivo .json.</p>
           <textarea id="json" spellcheck="false" aria-label="Configuración en JSON"></textarea>
           <div class="fila" style="margin-top:8px">
             <button class="btn peq" id="btnCopiarJson">Copiar</button>
@@ -332,43 +370,45 @@ const leer = (k, d) => { try { const v = localStorage.getItem(PREF + k); return 
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 const NOMBRES = ["Do", "Do♯", "Re", "Mi♭", "Mi", "Fa", "Fa♯", "Sol", "La♭", "La", "Si♭", "Si"];
 const nombreNota = m => NOMBRES[((Math.round(m) % 12) + 12) % 12] + (Math.floor(Math.round(m) / 12) - 1);
-const SLOTS = ["1", "2", "3", "4"];
+const MAX_VOCES = 8;
 
 /* =================================================================== PARÁMETROS */
 const PARAMS = [
   { id: "nivel", g: "Salida", n: "Nivel del instrumento", min: 0, max: 1, def: 0.6 },
-  { id: "vol", g: "Salida", n: "Volumen general", min: 0, max: 1, def: 0.6 },
+  { id: "vol", g: "Salida", n: "Volumen general", min: 0, max: 1, def: 0.7 },
   { id: "altura", g: "Altura", n: "Altura", min: -24, max: 24, def: 0, u: " st" },
   { id: "glide", g: "Altura", n: "Glide (ligado)", min: 0.005, max: 4, def: 0.12, u: " s", log: true },
   { id: "desaf", g: "Altura", n: "Desafinación (abanico)", min: 0, max: 50, def: 9, u: " ¢" },
   { id: "ancho", g: "Altura", n: "Ancho estéreo", min: 0, max: 1, def: 0.4 },
-  { id: "ataque", g: "Envolvente", n: "Ataque de la puerta", min: 0.005, max: 4, def: 0.25, u: " s", log: true },
+  { id: "vibrato", g: "Altura", n: "Vibrato · profundidad", min: 0, max: 100, def: 0, u: " ¢" },
+  { id: "vibratoVel", g: "Altura", n: "Vibrato · velocidad", min: 0.1, max: 12, def: 5.5, u: "Hz", log: true },
+  { id: "arpVel", g: "Arpegiador", n: "Arpegio · notas por tiempo", min: 0.5, max: 8, def: 2, log: true },
+  { id: "arpRango", g: "Arpegiador", n: "Arpegio · rango (octavas)", min: 1, max: 4, def: 2 },
+  { id: "arpLargo", g: "Arpegiador", n: "Arpegio · largo de cada nota", min: 0.05, max: 1, def: 0.6 },
+  { id: "ataque", g: "Envolvente", n: "Ataque de la puerta", min: 0.003, max: 4, def: 0.25, u: " s", log: true },
   { id: "suelta", g: "Envolvente", n: "Suelta de la puerta", min: 0.02, max: 8, def: 0.8, u: " s", log: true },
   { id: "sintesis", g: "Osciladores", n: "Nivel de los osciladores", min: 0, max: 1, def: 1 },
-  { id: "osc1", g: "Osciladores", n: "Oscilador 1", min: 0, max: 1.5, def: 1 },
-  { id: "osc2", g: "Osciladores", n: "Oscilador 2", min: 0, max: 1.5, def: 1 },
-  { id: "osc3", g: "Osciladores", n: "Oscilador 3", min: 0, max: 1.5, def: 1 },
-  { id: "osc4", g: "Osciladores", n: "Oscilador 4", min: 0, max: 1.5, def: 1 },
-  { id: "ruido", g: "Osciladores", n: "Ruido", min: 0, max: 1, def: 0 },
 ];
-SLOTS.forEach(S => PARAMS.push(
-  { id: `m${S}.nivel`, g: "Muestra " + S, n: `M${S} · nivel`, min: 0, max: 1.5, def: 1 },
-  { id: `m${S}.tono`, g: "Muestra " + S, n: `M${S} · transposición`, min: -24, max: 24, def: 0, u: " st" },
-  { id: `m${S}.pos`, g: "Muestra " + S, n: `M${S} · posición (nube / inicio)`, min: 0, max: 1, def: 0.3 },
-  { id: `m${S}.grano`, g: "Muestra " + S, n: `M${S} · tamaño del grano`, min: 0.01, max: 0.6, def: 0.09, u: " s", log: true },
-  { id: `m${S}.dens`, g: "Muestra " + S, n: `M${S} · densidad`, min: 1, max: 80, def: 14, u: " /s", log: true },
-  { id: `m${S}.disp`, g: "Muestra " + S, n: `M${S} · dispersión`, min: 0, max: 1, def: 0.15 },
-));
+for (let i = 1; i <= MAX_VOCES; i++) PARAMS.push({ id: "osc" + i, g: "Osciladores", n: "Oscilador " + i, min: 0, max: 1.5, def: 1 });
 PARAMS.push(
-  { id: "corte", g: "Filtro", n: "Corte del filtro", min: 40, max: 16000, def: 2400, u: "Hz", log: true },
+  { id: "ruido", g: "Osciladores", n: "Ruido", min: 0, max: 1, def: 0 },
+  { id: "corte", g: "Filtro", n: "Corte del filtro", min: 40, max: 18000, def: 2400, u: "Hz", log: true },
   { id: "q", g: "Filtro", n: "Resonancia (Q)", min: 0.3, max: 20, def: 1, log: true },
   { id: "lfoF", g: "Filtro", n: "Barrido del filtro · profundidad", min: 0, max: 3, def: 0, u: " oct" },
   { id: "lfoFVel", g: "Filtro", n: "Barrido del filtro · velocidad", min: 0.02, max: 12, def: 0.3, u: "Hz", log: true },
   { id: "dist", g: "Distorsión", n: "Distorsión · mezcla", min: 0, max: 1, def: 0 },
   { id: "drive", g: "Distorsión", n: "Distorsión · dureza", min: 1, max: 60, def: 20, log: true },
-  { id: "tono", g: "Distorsión", n: "Tono (pasa-bajos final)", min: 300, max: 18000, def: 18000, u: "Hz", log: true },
+  { id: "tono", g: "Distorsión", n: "Tono (pasa-bajos final)", min: 300, max: 20000, def: 20000, u: "Hz", log: true },
+  { id: "bits", g: "Lo-fi", n: "Lo-fi · bits (16 = apagado)", min: 1, max: 16, def: 16 },
+  { id: "reduccion", g: "Lo-fi", n: "Lo-fi · baja resolución (1 = apagado)", min: 1, max: 40, def: 1, u: "×", log: true },
+  { id: "ring", g: "Modulación", n: "Anillo · mezcla", min: 0, max: 1, def: 0 },
+  { id: "ringFrec", g: "Modulación", n: "Anillo · frecuencia", min: 1, max: 3000, def: 220, u: "Hz", log: true },
+  { id: "phaser", g: "Modulación", n: "Phaser · mezcla", min: 0, max: 1, def: 0 },
+  { id: "phaserVel", g: "Modulación", n: "Phaser · velocidad", min: 0.02, max: 8, def: 0.4, u: "Hz", log: true },
   { id: "trem", g: "Modulación", n: "Trémolo · profundidad", min: 0, max: 1, def: 0 },
-  { id: "tremVel", g: "Modulación", n: "Trémolo · velocidad", min: 0.05, max: 16, def: 4, u: "Hz", log: true },
+  { id: "tremVel", g: "Modulación", n: "Trémolo · velocidad", min: 0.05, max: 20, def: 4, u: "Hz", log: true },
+  { id: "autopan", g: "Modulación", n: "Paneo automático · profundidad", min: 0, max: 1, def: 0 },
+  { id: "autopanVel", g: "Modulación", n: "Paneo automático · velocidad", min: 0.02, max: 10, def: 0.5, u: "Hz", log: true },
   { id: "chorus", g: "Modulación", n: "Chorus · mezcla", min: 0, max: 1, def: 0 },
   { id: "chorusVel", g: "Modulación", n: "Chorus · velocidad", min: 0.05, max: 6, def: 0.7, u: "Hz", log: true },
   { id: "reverb", g: "Espacio", n: "Envío a reverb", min: 0, max: 1.5, def: 0.45 },
@@ -384,8 +424,12 @@ PARAMS.push(
 );
 const P = Object.fromEntries(PARAMS.map(p => [p.id, p]));
 const GRUPOS = [...new Set(PARAMS.map(p => p.g))];
+// Los niveles de osciladores que no existen se esconden de las listas
+const visible = p => { const m = /^osc(\d)$/.exec(p.id); return !m || +m[1] <= cfg.aj.voces.length; };
 function fmtV(id, v) {
   const p = P[id];
+  if (id === "bits") return v >= 15.95 ? "apagado" : v.toFixed(1) + " bits";
+  if (id === "reduccion") return v <= 1.02 ? "apagado" : "÷" + v.toFixed(1);
   if (p.u === "Hz") return v >= 1000 ? (v / 1000).toFixed(2) + " kHz" : v >= 100 ? Math.round(v) + " Hz" : v.toFixed(2) + " Hz";
   if (p.u === "°") return Math.round(v) + "°";
   if (p.u === " st") return (v > 0 ? "+" : "") + v.toFixed(1) + " st";
@@ -395,63 +439,91 @@ const FUENTES = { x: "X", y: "Y", z: "Z", r: "R", a: "A", v: "V", p: "P" };
 const COLF = { x: "var(--x)", y: "var(--y)", z: "var(--z)", r: "var(--r)", a: "var(--a)", v: "var(--v)", p: "var(--p)" };
 const CURVAS = { lin: "Lineal", cuad: "x²", cub: "x³", raiz: "√x", s: "S (suave)", exp: "Exponencial", esc: "5 escalones" };
 const ESCALAS = { cont: null, crom: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], mayor: [0, 2, 4, 5, 7, 9, 11], menor: [0, 2, 3, 5, 7, 8, 10],
-  penta: [0, 2, 4, 7, 9], pentam: [0, 3, 5, 7, 10], blues: [0, 3, 5, 6, 7, 10], dorica: [0, 2, 3, 5, 7, 9, 10] };
+  penta: [0, 2, 4, 7, 9], pentam: [0, 3, 5, 7, 10], blues: [0, 3, 5, 6, 7, 10], dorica: [0, 2, 3, 5, 7, 9, 10], frigia: [0, 1, 3, 5, 7, 8, 10], tonos: [0, 2, 4, 6, 8, 10] };
 function cuantizar(st) {
   const esc_ = ESCALAS[cfg.aj.escala]; if (!esc_) return st;
   const oct = Math.floor(st / 12), r = st - oct * 12; let mejor = 0, dist = 99;
   for (const g of esc_.concat(12)) { const d = Math.abs(r - g); if (d < dist) { dist = d; mejor = g; } }
   return oct * 12 + mejor;
 }
+const INTERVALOS = ["unísono", "2.ª menor", "2.ª mayor", "3.ª menor", "3.ª mayor", "4.ª justa", "tritono", "5.ª justa", "6.ª menor", "6.ª mayor", "7.ª menor", "7.ª mayor"];
+function nombreIntervalo(st) {
+  st = Math.round(st); const r = ((st % 12) + 12) % 12, oct = Math.floor(Math.abs(st) / 12);
+  if (st === 0) return "misma nota";
+  let t = r === 0 ? (oct === 1 ? "octava" : oct + " octavas") : INTERVALOS[r] + (Math.abs(st) >= 12 ? " + " + (oct === 1 ? "1 octava" : oct + " octavas") : "");
+  if (st < 0 && r !== 0) t = INTERVALOS[(12 - r) % 12] + (Math.abs(st) > 12 ? " + " + Math.floor((Math.abs(st) - 1) / 12) + " oct." : "");
+  return t + (st > 0 ? " arriba" : " abajo");
+}
 
 /* =================================================================== PRESETS */
 const A_ = (src, p, min, max, curva = "lin", inv = false) => ({ on: true, src, p, min, max, curva, inv });
+const V_ = (...l) => l.map(([forma, iv, fino = 0]) => ({ forma, iv, fino }));
 const PRESETS = [
   { nombre: "Drone filtrado", desc: "Un colchón grave que no se detiene. X abre el filtro y mete distorsión (curva x²) y acelera las luces; Y es el nivel y la intensidad de la luz.",
     asign: [A_("x", "corte", 200, 8200, "cuad"), A_("x", "dist", 0, 1, "cuad"), A_("x", "lucVel", 0.1, 1), A_("y", "nivel", 0, 1), A_("y", "lucInt", 0.25, 1)],
     base: { corte: 1480, dist: 0.16, reverb: 0.9, glide: 0.8, drive: 25, ataque: 0.9, suelta: 1.8 }, aj: { puerta: "mantener", escala: "cont" } },
   { nombre: "Theremin", desc: "Suena solo mientras tocas. X es la altura en la escala pentatónica (dos octavas y media), Y es el nivel con un vibrato que crece hacia arriba. El color de la luz sigue la nota.",
-    asign: [A_("x", "altura", -12, 19), A_("y", "nivel", 0.15, 1), A_("y", "trem", 0, 0.35, "cuad"), A_("x", "lucTono", 160, 340), A_("y", "lucInt", 0.3, 1)],
-    base: { glide: 0.06, osc2: 0, osc3: 0.4, osc4: 0.3, tremVel: 5.5, ataque: 0.03, suelta: 0.35, reverb: 0.7, eco: 0.25, corte: 5000, desaf: 4 },
-    aj: { puerta: "tocar", escala: "penta", voces: [{ forma: "triangle", iv: 0 }, { forma: "sine", iv: 7 }, { forma: "sine", iv: 12 }, { forma: "sine", iv: -12 }] } },
+    asign: [A_("x", "altura", -12, 19), A_("y", "nivel", 0.15, 1), A_("y", "vibrato", 0, 45, "cuad"), A_("x", "lucTono", 160, 340), A_("y", "lucInt", 0.3, 1)],
+    base: { glide: 0.06, osc2: 0.4, osc3: 0.3, ataque: 0.03, suelta: 0.35, reverb: 0.7, eco: 0.25, corte: 5000, desaf: 4 },
+    aj: { puerta: "tocar", escala: "penta", voces: V_(["triangle", 0], ["sine", 12], ["sine", -12]) } },
   { nombre: "Filtro resonante", desc: "X barre el corte en escala musical (80 Hz a 6 kHz), Y sube la resonancia hasta silbar. Z es el nivel: deja el punto quieto y haz fundidos.",
     asign: [A_("x", "corte", 80, 6000, "exp"), A_("y", "q", 0.7, 16, "exp"), A_("y", "lucInt", 0.3, 1), A_("z", "nivel", 0, 1), A_("x", "lucVel", 0.1, 1)], aj: { puerta: "mantener" } },
   { nombre: "Respiración", desc: "Trémolo: X es la velocidad (0,1 a 8 Hz) y Y la profundidad. Z es el nivel. La luz respira con el sonido.",
     asign: [A_("x", "tremVel", 0.1, 8, "exp"), A_("y", "trem", 0, 0.95), A_("x", "lucVel", 0.1, 1.2), A_("z", "nivel", 0, 1)], base: { lucAudio: 2.5, corte: 1800 }, aj: { puerta: "mantener" } },
   { nombre: "Muro de distorsión", desc: "X es la dureza y la mezcla de la distorsión, Y abre la reverb y el nivel, Z oscurece o abre el tono final. La luz se pone roja al apretar.",
-    asign: [A_("x", "drive", 2, 60, "exp"), A_("x", "dist", 0.2, 1), A_("y", "reverb", 0.3, 1.5), A_("y", "nivel", 0.2, 1), A_("z", "tono", 800, 18000, "exp"), A_("x", "lucTono", 230, 360), A_("y", "lucInt", 0.35, 1)],
+    asign: [A_("x", "drive", 2, 60, "exp"), A_("x", "dist", 0.2, 1), A_("y", "reverb", 0.3, 1.5), A_("y", "nivel", 0.2, 1), A_("z", "tono", 800, 20000, "exp"), A_("x", "lucTono", 230, 360), A_("y", "lucInt", 0.35, 1)],
     base: { corte: 2600 }, aj: { puerta: "mantener" } },
-  { nombre: "Nube granular", desc: "Usa la muestra 1 como nube de granos (si la ranura está vacía, carga un acorde de ejemplo). X recorre la grabación, Y es la densidad, Z el tamaño del grano y R la dispersión.",
-    asign: [A_("x", "m1.pos", 0, 1), A_("y", "m1.dens", 2, 60, "exp"), A_("z", "m1.grano", 0.02, 0.4, "exp"), A_("r", "m1.disp", 0, 1), A_("y", "lucInt", 0.3, 1), A_("x", "lucTono", 180, 300)],
-    base: { sintesis: 0, reverb: 1, corte: 9000 }, aj: { puerta: "mantener" }, muestraA: { modo: "granular", ejemplo: "acorde" } },
   { nombre: "Coro y eco", desc: "X abre el abanico de desafinación y el ancho estéreo, Y sube el chorus, Z manda al eco. Para texturas amplias.",
     asign: [A_("x", "desaf", 0, 45), A_("x", "ancho", 0, 1), A_("y", "chorus", 0, 1), A_("z", "eco", 0, 0.7), A_("y", "lucTam", 0.6, 1.8)], aj: { puerta: "mantener" } },
-  { nombre: "Oleaje", desc: "Usa R: en el centro el filtro está quieto y hacia las bordes se mueve como ola. X es la velocidad de la ola, Y el corte, Z el nivel.",
+  { nombre: "Oleaje", desc: "Usa R: en el centro el filtro está quieto y hacia los bordes se mueve como ola. X es la velocidad de la ola, Y el corte, Z el nivel.",
     asign: [A_("r", "lfoF", 0, 2.5, "cuad"), A_("x", "lfoFVel", 0.05, 4, "exp"), A_("y", "corte", 150, 5000, "exp"), A_("z", "nivel", 0, 1), A_("r", "lucInt", 0.3, 1)], aj: { puerta: "mantener" } },
-  { nombre: "Gesto", desc: "Responde a cómo te mueves, no a dónde estás: V (velocidad del gesto) sube la distorsión y la luz, A (ángulo) gira el color y la altura cromática, P (presión) abre el filtro.",
+  { nombre: "Gesto", desc: "Responde a cómo te mueves, no a dónde estás: V (velocidad del gesto) sube la distorsión y la luz, A (ángulo) gira el color y la altura, P (presión) abre el filtro.",
     asign: [A_("v", "dist", 0, 1, "raiz"), A_("v", "lucInt", 0.2, 1, "raiz"), A_("v", "nivel", 0.25, 1, "raiz"), A_("a", "lucTono", 0, 360), A_("a", "altura", 0, 12), A_("p", "corte", 400, 9000, "exp")],
     base: { glide: 0.2, lucAudio: 1.5 }, aj: { puerta: "mantener", escala: "mayor" } },
+  { nombre: "Arpegio cristal", desc: "Arpegiador en pentatónica con timbre de campanita. X es la velocidad (de 1 a 8 notas por tiempo, en escalones), Y abre el filtro y alarga las notas, Z manda al eco.",
+    asign: [A_("x", "arpVel", 1, 8, "esc"), A_("y", "corte", 600, 12000, "exp"), A_("y", "arpLargo", 0.1, 0.9), A_("z", "eco", 0, 0.7), A_("x", "lucVel", 0.2, 1.6), A_("y", "lucInt", 0.3, 1)],
+    base: { glide: 0.005, ataque: 0.01, suelta: 0.6, reverb: 0.8, ecoT: 0.75, ecoFb: 0.5, desaf: 3, osc2: 0.5, osc3: 0.35 },
+    aj: { puerta: "mantener", escala: "penta", arp: "subebaja", nota: 48, voces: V_(["triangle", 0], ["sine", 12, 4], ["sine", 19]) } },
+  { nombre: "Campanas en anillo", desc: "Modulador en anillo: multiplica el sonido por otra onda y lo vuelve metálico. X es la frecuencia del anillo, Y la mezcla, Z la reverb. Con senos suena a campanas.",
+    asign: [A_("x", "ringFrec", 30, 1500, "exp"), A_("y", "ring", 0, 1), A_("z", "reverb", 0.2, 1.5), A_("x", "lucTono", 40, 200), A_("y", "lucInt", 0.3, 1)],
+    base: { corte: 9000, nivel: 0.6, ataque: 0.4, suelta: 2 }, aj: { puerta: "mantener", escala: "cont", nota: 48, voces: V_(["sine", 0], ["sine", 7], ["sine", 12, 5]) } },
+  { nombre: "Phaser espacial", desc: "X es la velocidad del phaser y Y su mezcla; R (distancia al centro) hace girar el sonido entre los parlantes. Ideal con el drone.",
+    asign: [A_("x", "phaserVel", 0.05, 4, "exp"), A_("y", "phaser", 0, 1), A_("r", "autopan", 0, 1), A_("r", "autopanVel", 0.1, 3, "exp"), A_("x", "lucVel", 0.1, 1.4)],
+    base: { corte: 6000, reverb: 0.8, chorus: 0.3 }, aj: { puerta: "mantener" } },
+  { nombre: "8 bits", desc: "Sonido de consola antigua. X baja los bits (de 16 a 3), Y baja la resolución, Z es la altura en escala menor. Suena solo mientras tocas.",
+    asign: [A_("x", "bits", 16, 3), A_("y", "reduccion", 1, 24, "exp"), A_("z", "altura", -12, 12), A_("x", "lucTono", 100, 300)],
+    base: { glide: 0.01, ataque: 0.005, suelta: 0.15, reverb: 0.2, corte: 18000, desaf: 0 },
+    aj: { puerta: "tocar", escala: "menor", nota: 48, voces: V_(["square", 0], ["square", 12, 6]) } },
+  { nombre: "Sirena", desc: "Girar alrededor del centro (A) sube la altura sin escala, como una sirena; R (distancia al centro) agrega vibrato y Y abre el filtro.",
+    asign: [A_("a", "altura", 0, 24), A_("r", "vibrato", 0, 80, "cuad"), A_("y", "corte", 300, 9000, "exp"), A_("a", "lucTono", 0, 360), A_("r", "lucInt", 0.3, 1)],
+    base: { glide: 0.25, osc3: 0, osc4: 0.5, reverb: 0.6 }, aj: { puerta: "mantener", escala: "cont", nota: 48 } },
+  { nombre: "Pulso rítmico", desc: "Trémolo cuadrado que corta el sonido en pulsos. X es la velocidad (en escalones), Y el filtro, Z el paneo automático. Las luces laten con el pulso.",
+    asign: [A_("x", "tremVel", 1, 16, "esc"), A_("y", "corte", 200, 8000, "exp"), A_("z", "autopan", 0, 1), A_("y", "lucInt", 0.3, 1)],
+    base: { trem: 1, q: 4, lucAudio: 2.5, reverb: 0.5 }, aj: { puerta: "mantener", tremForma: "square" } },
 ];
 
 /* =================================================================== ESTADO */
 const baseDef = () => Object.fromEntries(PARAMS.map(p => [p.id, p.def]));
-const VOCES_DEF = [{ forma: "sawtooth", iv: 0 }, { forma: "sawtooth", iv: 7 }, { forma: "sawtooth", iv: 12 }, { forma: "sine", iv: -12 }];
-const MUESTRAS_DEF = () => SLOTS.map(() => ({ modo: "loop", sigue: true, base: 48, alTocar: false }));
-const AJ_DEF = () => ({ nota: 36, escala: "cont", puerta: "mantener", resp: 0.05, voces: VOCES_DEF.map(v => ({ ...v })), filtro: "lowpass", sala: 3.5, bpm: 120, luz: "manchas", luzPad: true, muestras: MUESTRAS_DEF() });
+const VOCES_DEF = () => V_(["sawtooth", 0], ["sawtooth", 7], ["sawtooth", 12], ["sine", -12]);
+const AJ_DEF = () => ({ nota: 36, escala: "cont", puerta: "mantener", resp: 0.05, voces: VOCES_DEF(), filtro: "lowpass", sala: 3.5, bpm: 120,
+  luz: "manchas", luzPad: true, arp: "off", tremForma: "sine", sinc: true });
+// Ajustes que un preset incluido no cambia si no los menciona
+const AJ_PERSONALES = ["luz", "luzPad", "sala", "bpm", "resp", "sinc"];
 const fabrica = () => ({ asign: PRESETS[0].asign.map(a => ({ ...a })), base: Object.assign(baseDef(), PRESETS[0].base), aj: Object.assign(AJ_DEF(), PRESETS[0].aj), preset: "b0" });
 function normalizar(c) {
   const d = AJ_DEF();
   c.base = Object.assign(baseDef(), c.base || {});
   c.aj = Object.assign(d, c.aj || {});
-  if (!Array.isArray(c.aj.voces) || c.aj.voces.length !== 4) c.aj.voces = d.voces;
-  if (!Array.isArray(c.aj.muestras) || c.aj.muestras.length !== 4) c.aj.muestras = d.muestras;
-  c.aj.muestras = c.aj.muestras.map(m => Object.assign({ modo: "loop", sigue: true, base: 48, alTocar: false }, m));
+  delete c.aj.muestras;
+  if (!Array.isArray(c.aj.voces) || !c.aj.voces.length) c.aj.voces = d.voces;
+  c.aj.voces = c.aj.voces.slice(0, MAX_VOCES).map(v => ({ forma: v.forma || "sawtooth", iv: +v.iv || 0, fino: +v.fino || 0 }));
   c.asign = (c.asign || []).filter(a => P[a.p] && FUENTES[a.src]);
   return c;
 }
 let cfg = leer("config", null);
 cfg = cfg && Array.isArray(cfg.asign) ? normalizar(cfg) : fabrica();
-let presetsUsuario = leer("presets", []);
-const E = { x: 0.4, y: 0.5, z: 0.5, v: 0, vRaw: 0, p: 0, encendido: false, tocando: false, espacio: false, vals: {} };
+let presetsUsuario = leer("presets", []).filter(p => p && Array.isArray(p.asign));
+const E = { x: 0.4, y: 0.5, z: 0.5, v: 0, vRaw: 0, p: 0, encendido: false, tocando: false, espacio: false, vals: {}, arpOff: 0 };
 const guardarCfg = () => { guardar("config", cfg); refrescarJson(); };
 
 /* =================================================================== MAPEO */
@@ -483,106 +555,192 @@ function calcular() {
 const asignadoA = id => cfg.asign.filter(a => a.on && a.p === id).map(a => a.src);
 const usaFuente = s => cfg.asign.some(a => a.on && a.src === s);
 
+/* =================================================================== PROCESADORES DE AUDIO (AudioWorklet) */
+// lofi: reduce bits y resolución; si está apagado, deja pasar la señal intacta.
+// grabador: copia la salida en vivo, sin compresión, para guardarla en WAV.
+const CODIGO_WORKLET = `
+class Lofi extends AudioWorkletProcessor {
+  static get parameterDescriptors() { return [{ name: "bits", defaultValue: 16, minValue: 1, maxValue: 16 }, { name: "reduccion", defaultValue: 1, minValue: 1, maxValue: 64 }]; }
+  constructor() { super(); this.cont = 0; this.ret = [0, 0]; }
+  process(ent, sal, par) {
+    const i = ent[0], o = sal[0]; if (!i || !i.length) return true;
+    const bits = par.bits[0], red = par.reduccion[0];
+    if (bits >= 15.95 && red <= 1.02) { for (let c = 0; c < o.length; c++) o[c].set(i[Math.min(c, i.length - 1)]); return true; }
+    const pasos = Math.pow(2, bits - 1);
+    for (let n = 0; n < o[0].length; n++) {
+      if (this.cont <= 0) { for (let c = 0; c < o.length; c++) { const x = i[Math.min(c, i.length - 1)][n]; this.ret[c] = Math.round(x * pasos) / pasos; } this.cont += red; }
+      this.cont -= 1;
+      for (let c = 0; c < o.length; c++) o[c][n] = this.ret[c];
+    }
+    return true;
+  }
+}
+registerProcessor("mt-lofi", Lofi);
+class Grabador extends AudioWorkletProcessor {
+  constructor() { super(); this.activo = false; this.desde = 0; this.port.onmessage = e => { this.activo = e.data.activo; this.desde = e.data.desde || 0; }; }
+  process(ent) {
+    const i = ent[0];
+    if (this.activo && i && i.length && currentTime >= this.desde) this.port.postMessage([i[0].slice(0), (i[1] || i[0]).slice(0)]);
+    return true;
+  }
+}
+registerProcessor("mt-grabador", Grabador);
+`;
+
 /* =================================================================== AUDIO */
 const NOM = { sawtooth: 0.08, square: 0.06, triangle: 0.14, sine: 0.2 };
-const DESAF = [-1, -1 / 3, 1 / 3, 1], PANS = [-0.35, 0.75, -0.75, 0];
 const KMAX = 60;
-const A = { ctx: null, slots: SLOTS.map(() => ({ buffer: null, nombre: "", loop: null, gain: null, sigGrano: 0 })) };
+const A = { ctx: null, voces: [] };
+const desafDe = (i, n) => n <= 1 ? 0 : -1 + 2 * i / (n - 1);
+const panDe = (i, n) => n <= 1 ? 0 : (i % 2 ? 1 : -1) * (0.35 + 0.65 * (i / (n - 1)));
+// Cambia un parámetro sin clics: congela el valor actual y desde ahí va al nuevo
+function suave(param, val, t, tau) {
+  if (param.cancelAndHoldAtTime) param.cancelAndHoldAtTime(t); else { param.cancelScheduledValues(t); param.setValueAtTime(param.value, t); }
+  param.setTargetAtTime(val, t, tau);
+}
 function iniciarAudio() {
   if (A.ctx) { if (A.ctx.state === "suspended") A.ctx.resume(); return; }
-  const ctx = new (window.AudioContext || window.webkitAudioContext)(); A.ctx = ctx;
+  const ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: "interactive" }); A.ctx = ctx;
+  $("infoSr").textContent = (ctx.sampleRate / 1000).toLocaleString("es") + " kHz";
   const G = v => { const g = ctx.createGain(); g.gain.value = v; return g; };
   const pan = v => { if (!ctx.createStereoPanner) return G(1); const p = ctx.createStereoPanner(); p.pan.value = v; return p; };
-  A.comp = ctx.createDynamicsCompressor(); A.comp.threshold.value = -14; A.comp.ratio.value = 4; A.comp.connect(ctx.destination);
-  A.analizador = ctx.createAnalyser(); A.analizador.fftSize = 1024; A.comp.connect(A.analizador);
-  if (ctx.createMediaStreamDestination) { A.grabDest = ctx.createMediaStreamDestination(); A.comp.connect(A.grabDest); }
-  // Salida y envíos
-  A.vol = G(0.6); A.vol.connect(A.comp);
+  const lfo = (f, tipo = "sine") => { const o = ctx.createOscillator(); o.type = tipo; o.frequency.value = f; o.start(); return o; };
+  // Salida: lo en vivo pasa por un limitador (sin bombeo) y luego se suma a las pistas grabadas
+  A.mezcla = G(1); A.mezcla.connect(ctx.destination);
+  A.analizador = ctx.createAnalyser(); A.analizador.fftSize = 1024; A.mezcla.connect(A.analizador);
+  A.lim = ctx.createDynamicsCompressor(); A.lim.threshold.value = -2; A.lim.knee.value = 0; A.lim.ratio.value = 20; A.lim.attack.value = 0.002; A.lim.release.value = 0.15;
+  A.vivo = G(1); A.lim.connect(A.vivo); A.vivo.connect(A.mezcla);
+  A.pistasBus = G(1); A.pistasBus.connect(A.mezcla);
+  // Volumen general y envíos
+  A.vol = G(0.7); A.vol.connect(A.lim);
   A.conv = ctx.createConvolver(); A.conv.buffer = respuestaReverb(+cfg.aj.sala, 2.2);
-  A.revSend = G(0); const revOut = G(0.8); A.vol.connect(A.revSend); A.revSend.connect(A.conv); A.conv.connect(revOut); revOut.connect(A.comp);
-  A.delay = ctx.createDelay(6); A.ecoSend = G(0); A.ecoFb = G(0.4);
-  A.vol.connect(A.ecoSend); A.ecoSend.connect(A.delay); A.delay.connect(A.ecoFb); A.ecoFb.connect(A.delay); A.delay.connect(A.comp);
+  A.revSend = G(0); const revOut = G(0.8); A.vol.connect(A.revSend); A.revSend.connect(A.conv); A.conv.connect(revOut); revOut.connect(A.lim);
+  A.delay = ctx.createDelay(6); A.ecoSend = G(0); A.ecoFb = G(0.4); const ecoTono = ctx.createBiquadFilter(); ecoTono.type = "lowpass"; ecoTono.frequency.value = 7000;
+  A.vol.connect(A.ecoSend); A.ecoSend.connect(A.delay); A.delay.connect(ecoTono); ecoTono.connect(A.ecoFb); A.ecoFb.connect(A.delay); A.delay.connect(A.lim);
   // Chorus estéreo (dos retardos modulados en contrafase)
   A.post = G(1); A.post.connect(A.vol);
   A.chorus = G(0); A.chorus.connect(A.vol);
-  A.lfoC = ctx.createOscillator(); A.lfoC.frequency.value = 0.7; A.lfoC.start();
+  A.lfoC = lfo(0.7);
   [1, -1].forEach(s => {
     const d = ctx.createDelay(0.1); d.delayTime.value = 0.018; const g = G(0.004 * s), p = pan(0.8 * s);
-    A.lfoC.connect(g); g.connect(d.delayTime); A.post.connect(d); d.connect(p); p.connect(A.chorus);
+    A.lfoC.connect(g); g.connect(d.delayTime); d.connect(p); p.connect(A.chorus); A["chD" + s] = d;
   });
-  // Cadena: fuentes → puerta → filtro → distorsión paralela → tono → nivel → trémolo → (seco + chorus) → volumen
-  A.trem = G(1); A.trem.connect(A.post);
+  // Paneo automático
+  A.autopan = pan(0); A.autopan.connect(A.post);
+  A.autopan.connect(A.chD1); A.autopan.connect(A["chD-1"]);
+  A.lfoP = lfo(0.5); A.lfoPG = G(0); A.lfoP.connect(A.lfoPG); if (A.autopan.pan) A.lfoPG.connect(A.autopan.pan);
+  // Trémolo
+  A.trem = G(1); A.trem.connect(A.autopan);
+  A.lfoT = lfo(4, cfg.aj.tremForma); A.tremG = G(0); A.lfoT.connect(A.tremG); A.tremG.connect(A.trem.gain);
+  // Nivel
   A.nivel = G(0.6); A.nivel.connect(A.trem);
-  A.tono = ctx.createBiquadFilter(); A.tono.type = "lowpass"; A.tono.Q.value = 0.7; A.tono.connect(A.nivel);
+  // Phaser: cuatro pasa-todo modulados
+  const phIn = G(1); A.phSeco = G(1); A.phMoj = G(0); phIn.connect(A.phSeco); A.phSeco.connect(A.nivel);
+  A.lfoPh = lfo(0.4); A.lfoPhG = G(1800); A.lfoPh.connect(A.lfoPhG);
+  let ant = phIn;
+  [300, 700, 1400, 2600].forEach(f => { const ap = ctx.createBiquadFilter(); ap.type = "allpass"; ap.frequency.value = f; ap.Q.value = 0.7; A.lfoPhG.connect(ap.detune); ant.connect(ap); ant = ap; });
+  ant.connect(A.phMoj); A.phMoj.connect(A.nivel);
+  // Modulador en anillo
+  const rIn = G(1); A.rSeco = G(1); A.rMul = G(0); A.rMoj = G(0);
+  rIn.connect(A.rSeco); A.rSeco.connect(phIn); rIn.connect(A.rMul); A.rMul.connect(A.rMoj); A.rMoj.connect(phIn);
+  A.ringOsc = lfo(220); A.ringOsc.connect(A.rMul.gain);
+  // Tono final
+  A.tono = ctx.createBiquadFilter(); A.tono.type = "lowpass"; A.tono.Q.value = 0.7; A.tono.connect(rIn);
+  // Lo-fi (se inserta cuando carga el AudioWorklet)
+  A.lofiIn = G(1); A.lofiIn.connect(A.tono);
+  // Distorsión paralela tanh con sobremuestreo ×4 y curva de alta resolución
   const ent = G(1), sal = G(1); A.seco = G(1); A.moj = G(0); A.drive = G(20 / KMAX);
   const pre = ctx.createBiquadFilter(); pre.type = "highpass"; pre.frequency.value = 80;
-  const ws = ctx.createWaveShaper(); const N = 8192, c = new Float32Array(N);
+  const ws = ctx.createWaveShaper(); const N = 65537, c = new Float32Array(N);
   for (let i = 0; i < N; i++) { const x = (i * 2) / (N - 1) - 1; c[i] = Math.tanh(KMAX * x) / Math.tanh(KMAX); }
-  ws.curve = c; ws.oversample = "2x";
-  ent.connect(A.seco); A.seco.connect(sal); ent.connect(pre); pre.connect(A.drive); A.drive.connect(ws); ws.connect(A.moj); A.moj.connect(sal); sal.connect(A.tono);
+  ws.curve = c; ws.oversample = "4x";
+  ent.connect(A.seco); A.seco.connect(sal); ent.connect(pre); pre.connect(A.drive); A.drive.connect(ws); ws.connect(A.moj); A.moj.connect(sal); sal.connect(A.lofiIn);
+  // Filtro
   A.filtro = ctx.createBiquadFilter(); A.filtro.gain.value = 12; A.filtro.connect(ent);
-  A.puerta = G(0); A.puerta.connect(A.filtro);
+  A.lfoF = lfo(0.3); A.lfoFG = G(0); A.lfoF.connect(A.lfoFG); A.lfoFG.connect(A.filtro.detune);
+  // Puerta del arpegiador y puerta principal
+  A.arpGate = G(1); A.arpGate.connect(A.filtro);
+  A.puerta = G(0); A.puerta.connect(A.arpGate);
   A.sintesis = G(1); A.sintesis.connect(A.puerta);
-  // LFOs
-  A.lfoF = ctx.createOscillator(); A.lfoFG = G(0); A.lfoF.connect(A.lfoFG); A.lfoFG.connect(A.filtro.detune); A.lfoF.start();
-  A.lfoT = ctx.createOscillator(); A.tremG = G(0); A.lfoT.connect(A.tremG); A.tremG.connect(A.trem.gain); A.lfoT.start();
-  // Osciladores
-  A.voces = cfg.aj.voces.map((v, i) => {
-    const osc = ctx.createOscillator(); osc.type = v.forma; const g = G(0), p = pan(0);
-    osc.connect(g); g.connect(p); p.connect(A.sintesis); osc.start(); return { osc, g, pan: p.pan ? p : null };
-  });
+  // Vibrato (va al detune de todos los osciladores)
+  A.lfoV = lfo(5.5); A.vibG = G(0); A.lfoV.connect(A.vibG);
+  crearVoces();
   // Ruido
   const n = ctx.sampleRate * 2; A.ruidoBuf = ctx.createBuffer(1, n, ctx.sampleRate);
   const d = A.ruidoBuf.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
   const rs = ctx.createBufferSource(); rs.buffer = A.ruidoBuf; rs.loop = true; A.ruido = G(0); rs.connect(A.ruido); A.ruido.connect(A.puerta); rs.start();
-  // Ranuras de muestras: loops y nubes → puerta; disparos → filtro
-  A.slots.forEach(s => { s.gain = G(0); s.gain.connect(A.puerta); s.gainDisparo = G(1); s.gainDisparo.connect(A.filtro); });
   aplicarAjustes(); aplicarAudio(calcular(), 0.01);
-  setInterval(granular, 25);
-  cargarMuestrasDefecto();
+  cargarWorklet();
+  setInterval(arpegiador, 20);
+}
+async function cargarWorklet() {
+  if (!A.ctx.audioWorklet) return;
+  try {
+    const url = URL.createObjectURL(new Blob([CODIGO_WORKLET], { type: "application/javascript" }));
+    await A.ctx.audioWorklet.addModule(url);
+    A.lofi = new AudioWorkletNode(A.ctx, "mt-lofi", { outputChannelCount: [2] });
+    A.lofiIn.disconnect(); A.lofiIn.connect(A.lofi); A.lofi.connect(A.tono);
+    A.grab = new AudioWorkletNode(A.ctx, "mt-grabador", { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1], channelCount: 2, channelCountMode: "explicit" });
+    const mudo = A.ctx.createGain(); mudo.gain.value = 0; A.vivo.connect(A.grab); A.grab.connect(mudo); mudo.connect(A.ctx.destination);
+    A.grab.port.onmessage = e => { if (Grab.activo) Grab.trozos.push(e.data); };
+    actualizar();
+  } catch (e) { console.warn("AudioWorklet no disponible:", e); }
+}
+function crearVoces() {
+  const ctx = A.ctx; if (!ctx) return;
+  const t = ctx.currentTime;
+  A.voces.forEach(o => { try { o.g.gain.setTargetAtTime(0, t, 0.01); o.osc.stop(t + 0.08); } catch (e) {} setTimeout(() => { o.g.disconnect(); if (o.pan) o.pan.disconnect(); }, 200); });
+  const v = E.vals.altura == null ? calcular() : E.vals;
+  A.voces = cfg.aj.voces.map(vz => {
+    const osc = ctx.createOscillator(); osc.type = vz.forma; osc.frequency.value = mtof(cfg.aj.nota + cuantizar(v.altura) + vz.iv);
+    const g = ctx.createGain(); g.gain.value = 0;
+    const p = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+    osc.connect(g); if (p) { g.connect(p); p.connect(A.sintesis); } else g.connect(A.sintesis);
+    A.vibG.connect(osc.detune);
+    osc.start(); return { osc, g, pan: p };
+  });
 }
 function respuestaReverb(seg, caida) {
   const ctx = A.ctx, len = Math.floor(ctx.sampleRate * seg), b = ctx.createBuffer(2, len, ctx.sampleRate);
-  for (let ch = 0; ch < 2; ch++) { const d = b.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, caida); }
+  for (let ch = 0; ch < 2; ch++) {
+    const d = b.getChannelData(ch); let lp = 0;
+    for (let i = 0; i < len; i++) { const k = 0.5 + 0.45 * (1 - i / len); lp += ((Math.random() * 2 - 1) - lp) * k; d[i] = lp * Math.pow(1 - i / len, caida); }
+  }
   return b;
 }
-const alturaQ = v => cuantizar(v.altura);
-// Transposición de una muestra: lleva su nota base a la nota del instrumento por el camino más corto, más la altura y su transposición
-function tasaMuestra(i, v) {
-  const m = cfg.aj.muestras[i]; let st = v[`m${SLOTS[i]}.tono`];
-  if (m.sigue) { let d = ((cfg.aj.nota - m.base) % 12 + 12) % 12; if (d > 6) d -= 12; st += d + alturaQ(v); }
-  return Math.pow(2, st / 12);
-}
+const notaActual = v => cfg.aj.nota + cuantizar(v.altura) + E.arpOff;
 function aplicarAudio(v, tau) {
   if (!A.ctx) return;
   const t = A.ctx.currentTime, k = tau == null ? +cfg.aj.resp : tau;
   const S = (param, val, kk = k) => param.setTargetAtTime(val, t, kk);
-  const base = cfg.aj.nota + alturaQ(v), gl = tau == null ? Math.max(0.003, v.glide / 3) : tau;
+  const base = notaActual(v), gl = tau == null ? Math.max(0.002, v.glide / 3) : tau;
+  const n = A.voces.length, norm = 2 / Math.sqrt(Math.max(1, n));
   S(A.sintesis.gain, v.sintesis); S(A.ruido.gain, v.ruido * 0.3);
   A.voces.forEach((o, i) => {
-    const vz = cfg.aj.voces[i];
-    S(o.g.gain, NOM[vz.forma] * v["osc" + (i + 1)]); S(o.osc.detune, DESAF[i] * v.desaf);
-    if (o.pan) S(o.pan.pan, PANS[i] * v.ancho);
-    S(o.osc.frequency, mtof(base + +vz.iv), gl);
+    const vz = cfg.aj.voces[i]; if (!vz) return;
+    S(o.g.gain, NOM[vz.forma] * norm * v["osc" + (i + 1)]); S(o.osc.detune, desafDe(i, n) * v.desaf + vz.fino);
+    if (o.pan) S(o.pan.pan, panDe(i, n) * v.ancho);
+    S(o.osc.frequency, mtof(base + vz.iv), gl);
   });
-  A.slots.forEach((s, i) => {
-    const m = cfg.aj.muestras[i];
-    S(s.gain.gain, s.buffer && m.modo !== "disparo" ? v[`m${SLOTS[i]}.nivel`] * (m.modo === "granular" ? 0.6 : 1) : 0);
-    if (s.loop) S(s.loop.playbackRate, tasaMuestra(i, v), gl);
-  });
+  S(A.vibG.gain, v.vibrato); S(A.lfoV.frequency, v.vibratoVel);
   S(A.filtro.frequency, v.corte); S(A.filtro.Q, v.q);
   S(A.lfoFG.gain, v.lfoF * 1200); S(A.lfoF.frequency, v.lfoFVel);
   S(A.seco.gain, 1 - v.dist * 0.85); S(A.moj.gain, v.dist * 0.35); S(A.drive.gain, v.drive / KMAX);
+  if (A.lofi) { A.lofi.parameters.get("bits").setValueAtTime(v.bits, t); A.lofi.parameters.get("reduccion").setValueAtTime(v.reduccion, t); }
   S(A.tono.frequency, v.tono);
+  S(A.rSeco.gain, 1 - v.ring); S(A.rMoj.gain, v.ring); S(A.ringOsc.frequency, v.ringFrec);
+  S(A.phSeco.gain, 1 - v.phaser * 0.5); S(A.phMoj.gain, v.phaser * 0.5); S(A.lfoPh.frequency, v.phaserVel);
   S(A.trem.gain, 1 - v.trem / 2); S(A.tremG.gain, v.trem / 2); S(A.lfoT.frequency, v.tremVel);
+  S(A.lfoPG.gain, v.autopan); S(A.lfoP.frequency, v.autopanVel);
   S(A.post.gain, 1 - v.chorus * 0.5); S(A.chorus.gain, v.chorus * 0.8); S(A.lfoC.frequency, v.chorusVel);
   S(A.revSend.gain, v.reverb); S(A.ecoSend.gain, v.eco); S(A.ecoFb.gain, v.ecoFb); S(A.delay.delayTime, v.ecoT * 60 / cfg.aj.bpm, 0.2);
   S(A.nivel.gain, v.nivel, Math.max(k, 0.03)); S(A.vol.gain, v.vol);
 }
 function aplicarAjustes() {
   if (!A.ctx) return;
-  A.voces.forEach((o, i) => { o.osc.type = cfg.aj.voces[i].forma; });
+  A.voces.forEach((o, i) => { if (cfg.aj.voces[i]) o.osc.type = cfg.aj.voces[i].forma; });
   A.filtro.type = cfg.aj.filtro;
+  A.lfoT.type = cfg.aj.tremForma;
 }
 // Puerta: abierta si está encendido, o (en modo «al tocar») mientras tocas el recuadro o mantienes Espacio
 function puertaAbierta() { return E.encendido || (cfg.aj.puerta === "tocar" && (E.tocando || E.espacio)); }
@@ -592,133 +750,168 @@ function actualizarPuerta() {
   $("estPuerta").textContent = ab ? "SUENA" : "SILENCIO"; $("estPuerta").classList.toggle("on", ab);
   $("btnOn").innerHTML = (E.encendido ? "Apagar" : "Encender") + " <kbd>Espacio</kbd>"; $("btnOn").classList.toggle("on", E.encendido);
   if (!A.ctx || ab === puertaPrev) return; puertaPrev = ab;
-  const t = A.ctx.currentTime, v = E.vals;
-  A.puerta.gain.cancelScheduledValues(t);
-  A.puerta.gain.setTargetAtTime(ab ? 1 : 0, t, ab ? v.ataque / 3 : v.suelta / 3);
+  const v = E.vals; suave(A.puerta.gain, ab ? 1 : 0, A.ctx.currentTime, ab ? v.ataque / 3 : v.suelta / 3);
+  if (ab) Arp.paso = 0;
 }
 function encender(v) { iniciarAudio(); E.encendido = v; actualizarPuerta(); }
 
-/* ---------- Muestras ---------- */
-function ponerMuestra(i, buffer, nombre) {
-  const s = A.slots[i];
-  if (s.loop) { try { s.loop.stop(); } catch (e) {} s.loop.disconnect(); s.loop = null; }
-  s.buffer = buffer; s.nombre = buffer ? nombre : ""; s.sigGrano = 0;
-  rearmarSlot(i);
-  dibujarSlots(); actualizar();
+/* ---------- Arpegiador ---------- */
+const Arp = { sig: 0, paso: 0, dir: 1 };
+function notasArp(rango) {
+  const g = ESCALAS[cfg.aj.escala] || [0, 4, 7]; const l = [];
+  for (let o = 0; o < rango; o++) g.forEach(x => l.push(o * 12 + x));
+  l.push(rango * 12); return l;
 }
-function rearmarSlot(i) {
-  const s = A.slots[i], m = cfg.aj.muestras[i];
-  if (s.loop) { try { s.loop.stop(); } catch (e) {} s.loop.disconnect(); s.loop = null; }
-  if (s.buffer && m.modo === "loop" && A.ctx) {
-    const src = A.ctx.createBufferSource(); src.buffer = s.buffer; src.loop = true; src.playbackRate.value = tasaMuestra(i, E.vals);
-    src.connect(s.gain); src.start(); s.loop = src;
+function arpegiador() {
+  if (!A.ctx) return;
+  const t0 = A.ctx.currentTime, v = E.vals;
+  if (cfg.aj.arp === "off" || !puertaAbierta()) {
+    if (E.arpOff !== 0 || A.arpGate.gain.value < 0.99) { E.arpOff = 0; suave(A.arpGate.gain, 1, t0, 0.01); actualizar(); }
+    Arp.sig = t0; return;
   }
-}
-function disparar(i) {
-  iniciarAudio();
-  const s = A.slots[i], m = cfg.aj.muestras[i]; if (!s.buffer || m.modo !== "disparo") return;
-  const v = E.vals, S = SLOTS[i], t = A.ctx.currentTime;
-  const src = A.ctx.createBufferSource(); src.buffer = s.buffer; src.playbackRate.value = tasaMuestra(i, v);
-  const g = A.ctx.createGain(); g.gain.value = v[`m${S}.nivel`];
-  src.connect(g); g.connect(s.gainDisparo); src.start(t, v[`m${S}.pos`] * s.buffer.duration * 0.95);
-  src.onended = () => g.disconnect();
-  const b = document.querySelector(`.slot-btn[data-i="${i}"]`); if (b) { b.classList.add("golpe"); setTimeout(() => b.classList.remove("golpe"), 140); }
-  Luces.pulso(0.6);
-}
-// Motor granular: cada 25 ms programa los granos de los próximos 100 ms
-function granular() {
-  if (!A.ctx || !puertaAbierta() && A.puerta.gain.value < 0.001) return;
-  const ahora = A.ctx.currentTime, hasta = ahora + 0.1, v = E.vals;
-  A.slots.forEach((s, i) => {
-    const m = cfg.aj.muestras[i], S = SLOTS[i];
-    if (!s.buffer || m.modo !== "granular" || v[`m${S}.nivel`] <= 0) return;
-    if (s.sigGrano < ahora) s.sigGrano = ahora + 0.01;
-    const dens = v[`m${S}.dens`], gr = v[`m${S}.grano`], disp = v[`m${S}.disp`], dur = s.buffer.duration, tasa = tasaMuestra(i, v);
-    let n = 0;
-    while (s.sigGrano < hasta && n++ < 40) {
-      const t = s.sigGrano;
-      const pos = clamp(v[`m${S}.pos`] + (Math.random() - 0.5) * disp * 0.5) * Math.max(0, dur - gr * tasa);
-      const src = A.ctx.createBufferSource(); src.buffer = s.buffer; src.playbackRate.value = tasa * Math.pow(2, (Math.random() - 0.5) * disp * 0.15);
-      const g = A.ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.5, t + gr / 2); g.gain.linearRampToValueAtTime(0, t + gr);
-      const p = A.ctx.createStereoPanner ? A.ctx.createStereoPanner() : null;
-      src.connect(g); if (p) { p.pan.value = (Math.random() - 0.5) * disp * 1.6; g.connect(p); p.connect(s.gain); } else g.connect(s.gain);
-      src.start(t, pos, gr * 1.05); src.onended = () => { g.disconnect(); if (p) p.disconnect(); };
-      s.sigGrano += (1 / dens) * (1 + (Math.random() - 0.5) * disp);
-    }
-  });
-}
-// Ejemplos generados en el navegador (sin archivos externos)
-const EJEMPLOS = { acorde: "Acorde de pad (Do mayor 7)", campana: "Campana FM (Do4)", viento: "Viento (ruido filtrado)", golpe: "Golpe grave (bombo)", voz: "Vocal sintética «a» (Do3)" };
-const BASE_EJ = { acorde: 48, campana: 60, viento: 48, golpe: 36, voz: 48 };
-function generarEjemplo(tipo) {
-  const sr = A.ctx.sampleRate, dur = { acorde: 4, campana: 3, viento: 4, golpe: 0.7, voz: 3 }[tipo], n = Math.floor(sr * dur);
-  const b = A.ctx.createBuffer(2, n, sr), L = b.getChannelData(0), R = b.getChannelData(1);
-  let lp = [0, 0], f1 = 0, f2 = 0, seed = 1;
-  const rnd = () => (seed = (seed * 16807) % 2147483647) / 1073741823.5 - 1;
-  for (let i = 0; i < n; i++) {
-    const t = i / sr; let l = 0, r = 0;
-    if (tipo === "acorde") {
-      [48, 52, 55, 59, 64].forEach((m, k) => { const f = mtof(m); [-0.004, 0.004].forEach((dt, j) => { const ph = (t * f * (1 + dt * (k % 2 ? 1 : -1))) % 1; const s = (2 * ph - 1) * 0.06; if (j) r += s; else l += s; }); });
-      const env = Math.min(1, t / 0.8) * Math.min(1, (dur - t) / 0.6); lp[0] += (l - lp[0]) * 0.08; lp[1] += (r - lp[1]) * 0.08; l = lp[0] * env * 2.2; r = lp[1] * env * 2.2;
-    } else if (tipo === "campana") {
-      const f = mtof(60), mod = Math.sin(2 * Math.PI * f * 3.5 * t) * 4 * Math.exp(-t * 1.5);
-      l = r = Math.sin(2 * Math.PI * f * t + mod) * Math.exp(-t * 1.2) * 0.5 * Math.min(1, t / 0.003);
-      r *= 0.9 + 0.1 * Math.sin(t * 5);
-    } else if (tipo === "viento") {
-      const c = 0.02 + 0.06 * (0.5 + 0.5 * Math.sin(2 * Math.PI * t / dur)); lp[0] += (rnd() - lp[0]) * c; lp[1] += (rnd() - lp[1]) * c;
-      const env = Math.min(1, t / 0.5) * Math.min(1, (dur - t) / 0.5); l = lp[0] * env * 2; r = lp[1] * env * 2;
-    } else if (tipo === "golpe") {
-      const ph = 2 * Math.PI * (45 * t + (110 / 18) * (1 - Math.exp(-t * 18)));
-      l = r = Math.sin(ph) * Math.exp(-t * 6) * 0.9 + (t < 0.004 ? rnd() * 0.3 : 0);
-    } else if (tipo === "voz") {
-      const f = mtof(48) * (1 + 0.006 * Math.sin(2 * Math.PI * 5.2 * t)); const ph = (t * f) % 1; const pulso = ph < 0.08 ? Math.sin(Math.PI * ph / 0.08) : 0;
-      f1 += (pulso - f1) * 0.18; f2 += (f1 - f2) * 0.5; // formantes aproximados con dos polos simples
-      const env = Math.min(1, t / 0.15) * Math.min(1, (dur - t) / 0.3); l = r = (f1 * 1.4 - f2 * 0.6) * env;
-    }
-    L[i] = l; R[i] = r;
+  const pasos = [0.5, 1, 1.5, 2, 3, 4, 6, 8].reduce((a, b) => Math.abs(b - v.arpVel) < Math.abs(a - v.arpVel) ? b : a);
+  const dur = 60 / cfg.aj.bpm / pasos, notas = notasArp(Math.round(clamp(v.arpRango, 1, 4)));
+  if (Arp.sig < t0) Arp.sig = t0 + 0.01;
+  while (Arp.sig < t0 + 0.06) {
+    const n = notas.length; let i;
+    if (cfg.aj.arp === "sube") i = Arp.paso % n;
+    else if (cfg.aj.arp === "baja") i = n - 1 - (Arp.paso % n);
+    else if (cfg.aj.arp === "subebaja") { const c = Math.max(1, 2 * n - 2); const k = Arp.paso % c; i = k < n ? k : c - k; }
+    else i = Math.floor(Math.random() * n);
+    Arp.paso++;
+    const ts = Arp.sig, off = notas[i], base = cfg.aj.nota + cuantizar(v.altura) + off, gl = Math.max(0.002, v.glide / 3);
+    A.voces.forEach((o, k) => { const vz = cfg.aj.voces[k]; if (vz) o.osc.frequency.setTargetAtTime(mtof(base + vz.iv), ts, gl); });
+    const g = A.arpGate.gain;
+    g.setTargetAtTime(1, ts, 0.003);
+    if (v.arpLargo < 0.97) g.setTargetAtTime(0, ts + dur * v.arpLargo, 0.012);
+    setTimeout(() => { E.arpOff = off; }, Math.max(0, (ts - t0) * 1000));
+    if (off === 0 || Arp.paso % notas.length === 1) Luces.pulso(0.35);
+    Arp.sig += dur;
   }
-  return b;
-}
-async function cargarMuestrasDefecto() {
-  // Si junto a la página hay sonidos/muestras.json, carga esas muestras en las ranuras (ver sonidos/LEEME.md)
-  if (!/^https?:/.test(location.protocol) || /claude(usercontent)?\.(ai|com)$/.test(location.hostname)) return;
-  try {
-    const r = await fetch("sonidos/muestras.json"); if (!r.ok) return;
-    const man = await r.json();
-    for (const [k, o] of Object.entries(man)) {
-      const i = SLOTS.indexOf(k.toUpperCase()); if (i < 0 || !o || !o.archivo || A.slots[i].buffer) continue;
-      try {
-        const rr = await fetch("sonidos/" + o.archivo); if (!rr.ok) continue;
-        const b = await A.ctx.decodeAudioData(await rr.arrayBuffer());
-        if (o.modo) cfg.aj.muestras[i].modo = o.modo; if (o.base) cfg.aj.muestras[i].base = +o.base;
-        ponerMuestra(i, b, o.archivo);
-      } catch (e) {}
-    }
-    dibujarSlotsCfg();
-  } catch (e) {}
 }
 
-/* ---------- Grabación ---------- */
-let grabador = null, trozos = [], tGrab = 0;
+/* =================================================================== GRABACIÓN Y PISTAS */
+const Grab = { activo: false, trozos: [], inicio: 0, proc: null };
+const pistas = []; let nPista = 0;
 function grabar() {
   iniciarAudio();
-  if (!A.grabDest || !window.MediaRecorder) { $("toma").hidden = false; $("toma").innerHTML = `<span class="msg">Este navegador no permite grabar el audio.</span>`; return; }
-  if (grabador && grabador.state === "recording") { grabador.stop(); return; }
-  const tipos = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/mp4", ""];
-  const tipo = tipos.find(t => !t || MediaRecorder.isTypeSupported(t));
-  try { grabador = new MediaRecorder(A.grabDest.stream, tipo ? { mimeType: tipo } : undefined); } catch (e) { return; }
-  trozos = []; tGrab = performance.now();
-  grabador.ondataavailable = e => { if (e.data.size) trozos.push(e.data); };
-  grabador.onstop = () => {
-    const blob = new Blob(trozos, { type: grabador.mimeType }), url = URL.createObjectURL(blob);
-    const ext = /ogg/.test(blob.type) ? "ogg" : /mp4/.test(blob.type) ? "m4a" : "webm";
-    const nombre = "mtrackpad-" + new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-") + "." + ext;
-    $("toma").hidden = false;
-    $("toma").innerHTML = `<audio controls src="${url}"></audio>` + (enMarco ? "" : `<a class="btn peq" href="${url}" download="${nombre}">Descargar toma</a>`);
-    $("btnRec").innerHTML = "● Grabar <kbd>G</kbd>"; $("btnRec").classList.remove("rec"); $("estRec").hidden = true;
-  };
-  grabador.start(250);
+  if (Grab.activo) { detenerGrabacion(); return; }
+  const ctx = A.ctx, t = ctx.currentTime + 0.05;
+  if ($("ajSinc").checked) pistas.filter(p => p.src).forEach(p => reproducir(p, t));
+  Grab.trozos = []; Grab.activo = true; Grab.inicio = performance.now();
+  if (A.grab) A.grab.port.postMessage({ activo: true, desde: t });
+  else {
+    // Respaldo para navegadores sin AudioWorklet
+    const sp = ctx.createScriptProcessor(4096, 2, 2);
+    sp.onaudioprocess = e => { if (Grab.activo) Grab.trozos.push([e.inputBuffer.getChannelData(0).slice(0), e.inputBuffer.getChannelData(1).slice(0)]); };
+    A.vivo.connect(sp); sp.connect(ctx.destination); Grab.proc = sp;
+  }
   $("btnRec").innerHTML = "■ Detener <kbd>G</kbd>"; $("btnRec").classList.add("rec"); $("estRec").hidden = false;
+}
+function detenerGrabacion() {
+  Grab.activo = false;
+  if (A.grab) A.grab.port.postMessage({ activo: false });
+  if (Grab.proc) { Grab.proc.disconnect(); Grab.proc = null; }
+  $("btnRec").innerHTML = "● Grabar <kbd>G</kbd>"; $("btnRec").classList.remove("rec"); $("estRec").hidden = true;
+  setTimeout(() => {
+    const trozos = Grab.trozos; Grab.trozos = [];
+    const total = trozos.reduce((s, tr) => s + tr[0].length, 0);
+    if (total < A.ctx.sampleRate * 0.1) { $("msgPistas").textContent = "La grabación fue demasiado corta."; return; }
+    const b = A.ctx.createBuffer(2, total, A.ctx.sampleRate), L = b.getChannelData(0), R = b.getChannelData(1);
+    let pos = 0; trozos.forEach(tr => { L.set(tr[0], pos); R.set(tr[1], pos); pos += tr[0].length; });
+    nPista++;
+    const p = { id: nPista, nombre: "Pista " + nPista, buffer: b, vol: 0.9, mute: false, loop: true, src: null, gain: null, t0: 0 };
+    pistas.push(p); dibujarPistas(); $("msgPistas").textContent = "";
+  }, 120);
+}
+function reproducir(p, t) {
+  const ctx = A.ctx; t = t || ctx.currentTime + 0.02;
+  parar(p);
+  p.gain = ctx.createGain(); p.gain.gain.value = p.mute ? 0 : p.vol; p.gain.connect(A.pistasBus);
+  const s = ctx.createBufferSource(); s.buffer = p.buffer; s.loop = p.loop; s.connect(p.gain); s.start(t);
+  s.onended = () => { if (p.src === s) { p.src = null; dibujarPistas(); } };
+  p.src = s; p.t0 = t; dibujarPistas();
+}
+function parar(p) { if (p.src) { const s = p.src; p.src = null; try { s.stop(); } catch (e) {} } if (p.gain) { const g = p.gain; setTimeout(() => g.disconnect(), 50); p.gain = null; } }
+function alternar(p) { iniciarAudio(); if (p.src) { parar(p); dibujarPistas(); } else reproducir(p); }
+function todas() {
+  iniciarAudio(); if (!pistas.length) return;
+  const algo = pistas.some(p => p.src); if (algo) { pistas.forEach(parar); dibujarPistas(); return; }
+  const t = A.ctx.currentTime + 0.05; pistas.forEach(p => reproducir(p, t));
+}
+const dur = s => Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
+function dibujarPistas() {
+  const cont = $("listaPistas"); cont.innerHTML = "";
+  $("btnMezcla").disabled = !pistas.length; $("btnTodas").disabled = !pistas.length; $("btnDetTodas").disabled = !pistas.some(p => p.src);
+  if (!pistas.length) { cont.innerHTML = `<p class="vacio">Todavía no hay pistas. Presiona <b>Grabar</b> (<kbd>G</kbd>), toca, y presiona de nuevo para terminar: la toma aparece aquí y puedes dejarla sonando en bucle mientras grabas otra capa encima.</p>`; return; }
+  pistas.forEach((p, i) => {
+    const d = document.createElement("div"); d.className = "pista" + (p.src ? " suena" : "") + (p.mute ? " silenciada" : "");
+    d.innerHTML = `<button class="btn play" aria-label="${p.src ? "Parar" : "Reproducir"} ${esc(p.nombre)}" title="${p.src ? "Parar" : "Reproducir"} (${i + 1})">${p.src ? "■" : "▶"}</button>
+      <div class="nom"><input type="text" id="pn${p.id}" value="${esc(p.nombre)}" aria-label="Nombre de la pista"><span>${dur(p.buffer.duration)} · ${i < 9 ? "tecla " + (i + 1) : ""}</span></div>
+      <button class="quitar" aria-label="Borrar pista" title="Borrar pista">✕</button>
+      <div class="ctrl">
+        <label class="check" style="align-items:center"><input type="checkbox" id="pl${p.id}"${p.loop ? " checked" : ""}> <span>Bucle</span></label>
+        <label class="check" style="align-items:center"><input type="checkbox" id="pm${p.id}"${p.mute ? " checked" : ""}> <span>Silenciar</span></label>
+        <input type="range" id="pv${p.id}" min="0" max="1.5" step="0.01" value="${p.vol}" aria-label="Volumen de la pista">
+        <button class="btn peq" data-wav>⬇ WAV</button>
+      </div>
+      <div class="barrita"><i data-prog="${p.id}"></i></div>`;
+    d.querySelector(".play").onclick = () => alternar(p);
+    d.querySelector(`#pn${p.id}`).oninput = e => { p.nombre = e.target.value || "Pista " + p.id; };
+    d.querySelector(".quitar").onclick = e => confirmar(e.currentTarget, "¿Borrar?", () => { parar(p); pistas.splice(pistas.indexOf(p), 1); dibujarPistas(); });
+    d.querySelector(`#pl${p.id}`).onchange = e => { p.loop = e.target.checked; if (p.src) p.src.loop = p.loop; };
+    d.querySelector(`#pm${p.id}`).onchange = e => { p.mute = e.target.checked; d.classList.toggle("silenciada", p.mute); if (p.gain) suave(p.gain.gain, p.mute ? 0 : p.vol, A.ctx.currentTime, 0.02); };
+    d.querySelector(`#pv${p.id}`).oninput = e => { p.vol = +e.target.value; if (p.gain && !p.mute) suave(p.gain.gain, p.vol, A.ctx.currentTime, 0.02); };
+    d.querySelector("[data-wav]").onclick = () => descargar(wav(p.buffer), nombreArchivo(p.nombre) + ".wav");
+    cont.appendChild(d);
+  });
+}
+function progresoPistas() {
+  if (!A.ctx) return;
+  pistas.forEach(p => {
+    const el = document.querySelector(`[data-prog="${p.id}"]`); if (!el) return;
+    if (!p.src) { el.style.width = "0"; return; }
+    const tt = Math.max(0, A.ctx.currentTime - p.t0), d = p.buffer.duration;
+    el.style.width = ((p.loop ? tt % d : Math.min(tt, d)) / d * 100) + "%";
+  });
+}
+// Mezcla todas las pistas no silenciadas en un solo WAV (las que no están en bucle suenan una vez; el largo es el de la más larga)
+function exportarMezcla() {
+  const activas = pistas.filter(p => !p.mute); if (!activas.length) { $("msgPistas").textContent = "Todas las pistas están silenciadas."; return; }
+  const sr = A.ctx.sampleRate, largo = Math.max(...activas.map(p => p.buffer.length));
+  const L = new Float32Array(largo), R = new Float32Array(largo);
+  activas.forEach(p => {
+    const bl = p.buffer.getChannelData(0), br = p.buffer.getChannelData(1), n = p.buffer.length;
+    for (let i = 0; i < largo; i++) { if (!p.loop && i >= n) break; const j = i % n; L[i] += bl[j] * p.vol; R[i] += br[j] * p.vol; }
+  });
+  let pico = 0; for (let i = 0; i < largo; i++) pico = Math.max(pico, Math.abs(L[i]), Math.abs(R[i]));
+  if (pico > 0.999) { const k = 0.999 / pico; for (let i = 0; i < largo; i++) { L[i] *= k; R[i] *= k; } }
+  descargar(wav({ numberOfChannels: 2, sampleRate: sr, length: largo, getChannelData: c => c ? R : L }), "mtrackpad-mezcla-" + fechaArchivo() + ".wav");
+  $("msgPistas").textContent = pico > 0.999 ? "Mezcla exportada (se bajó el volumen para que no sature)." : "Mezcla exportada.";
+}
+// WAV PCM de 24 bits, sin compresión
+function wav(b) {
+  const nc = 2, sr = b.sampleRate, n = b.length, bps = 3, datos = n * nc * bps;
+  const buf = new ArrayBuffer(44 + datos), dv = new DataView(buf);
+  const str = (o, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
+  str(0, "RIFF"); dv.setUint32(4, 36 + datos, true); str(8, "WAVE"); str(12, "fmt "); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true);
+  dv.setUint16(22, nc, true); dv.setUint32(24, sr, true); dv.setUint32(28, sr * nc * bps, true); dv.setUint16(32, nc * bps, true); dv.setUint16(34, 24, true);
+  str(36, "data"); dv.setUint32(40, datos, true);
+  const ch = [b.getChannelData(0), b.numberOfChannels > 1 ? b.getChannelData(1) : b.getChannelData(0)];
+  let o = 44;
+  for (let i = 0; i < n; i++) for (let c = 0; c < nc; c++) {
+    const v = Math.round(clamp(ch[c][i], -1, 1) * 8388607);
+    dv.setUint8(o, v & 255); dv.setUint8(o + 1, (v >> 8) & 255); dv.setUint8(o + 2, (v >> 16) & 255); o += 3;
+  }
+  return new Blob([buf], { type: "audio/wav" });
+}
+const fechaArchivo = () => { const d = new Date(), z = x => String(x).padStart(2, "0"); return d.getFullYear() + z(d.getMonth() + 1) + z(d.getDate()) + "-" + z(d.getHours()) + z(d.getMinutes()) + z(d.getSeconds()); };
+const nombreArchivo = s => "mtrackpad-" + (s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^\w-]+/g, "-").replace(/^-|-$/g, "").toLowerCase() || "pista") + "-" + fechaArchivo();
+function descargar(blob, nombre) {
+  const url = URL.createObjectURL(blob), a = document.createElement("a");
+  a.href = url; a.download = nombre; a.rel = "noopener"; a.style.display = "none";
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 60000);
 }
 
 /* =================================================================== LUCES */
@@ -733,7 +926,7 @@ const Luces = (() => {
   const espectro = new Uint8Array(512);
   function cuadro(dt, nivel) {
     const w = canvas.width = canvas.clientWidth * devicePixelRatio, h = canvas.height = canvas.clientHeight * devicePixelRatio;
-    const v = E.vals, suena = puertaAbierta();
+    const v = E.vals, suena = puertaAbierta() || pistas.some(p => p.src);
     if (tonoSuave == null) tonoSuave = v.lucTono;
     let dh = v.lucTono - tonoSuave; dh = ((dh + 540) % 360) - 180; tonoSuave += dh * (1 - Math.exp(-dt * 6));
     const intens = suena ? v.lucInt : v.lucInt * 0.3;
@@ -763,7 +956,6 @@ const Luces = (() => {
         c2.strokeStyle = `rgba(${c[0]},${c[1]},${c[2]},${a.a * (1 - a.r / 1.2)})`;
         c2.beginPath(); c2.arc(w / 2, h / 2, a.r * Math.max(w, h) * 0.7 * tam, 0, Math.PI * 2); c2.stroke();
       });
-      if (anillos.length > 60) anillos.splice(0, anillos.length - 60);
     } else if (modo === "espectro") {
       if (A.analizador) A.analizador.getByteFrequencyData(espectro);
       const nb = 48, bw = w / nb;
@@ -777,6 +969,7 @@ const Luces = (() => {
     } else {
       c2.fillStyle = `rgba(${col[0]},${col[1]},${col[2]},${0.2 + intens * 0.8 * (0.85 + 0.15 * Math.sin(fase * 4))})`; c2.fillRect(0, 0, w, h);
     }
+    if (anillos.length > 60) anillos.splice(0, anillos.length - 60);
     nivelPrev = nivel;
     if (dest > 0.01) { c2.fillStyle = `rgba(255,255,255,${dest * 0.8})`; c2.fillRect(0, 0, w, h); }
     const xy = $("xy");
@@ -799,7 +992,7 @@ function destello() {
   const ctx = A.ctx, t = ctx.currentTime;
   const s = ctx.createBufferSource(); s.buffer = A.ruidoBuf; s.loop = true;
   const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 3000; bp.Q.value = 0.8;
-  const g = ctx.createGain(); g.gain.setValueAtTime(0.3, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.2);
+  const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.3, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.2);
   s.connect(bp); bp.connect(g); g.connect(A.vol); s.start(t); s.stop(t + 1.3);
 }
 
@@ -818,7 +1011,6 @@ function moverXY(e) {
 xy.addEventListener("pointerdown", e => {
   e.preventDefault(); iniciarAudio(); xy.focus({ preventScroll: true }); xy.setPointerCapture(e.pointerId);
   E.tocando = true; xy.classList.add("tocando"); ultimoMov = null; moverXY(e); actualizarPuerta();
-  cfg.aj.muestras.forEach((m, i) => { if (m.modo === "disparo" && m.alTocar) disparar(i); });
 });
 xy.addEventListener("pointermove", e => { if (e.buttons || e.pointerType === "pen") moverXY(e); });
 const soltar = () => { E.tocando = false; E.p = 0; xy.classList.remove("tocando"); ultimoMov = null; actualizar(); actualizarPuerta(); };
@@ -834,7 +1026,7 @@ function etiquetasEjes() {
 }
 
 /* =================================================================== EDITOR DE ASIGNACIONES */
-const opcionesParam = sel => GRUPOS.map(g => `<optgroup label="${esc(g)}">` + PARAMS.filter(p => p.g === g).map(p => `<option value="${p.id}"${p.id === sel ? " selected" : ""}>${esc(p.n)}</option>`).join("") + "</optgroup>").join("");
+const opcionesParam = sel => GRUPOS.map(g => `<optgroup label="${esc(g)}">` + PARAMS.filter(p => p.g === g && (visible(p) || p.id === sel)).map(p => `<option value="${p.id}"${p.id === sel ? " selected" : ""}>${esc(p.n)}</option>`).join("") + "</optgroup>").join("");
 const num = v => +(+v).toPrecision(4);
 function dibujarAsign() {
   const cont = $("asigLista"); cont.innerHTML = "";
@@ -856,6 +1048,7 @@ function dibujarAsign() {
     q(`#a${i}src`).onchange = e => { a.src = e.target.value; d.style.setProperty("--c", COLF[a.src]); cambio(); };
     q(`#a${i}p`).onchange = e => {
       a.p = e.target.value; const p = P[a.p]; a.min = p.min; a.max = p.max; a.curva = p.log ? "exp" : "lin";
+      if (a.p === "bits") { a.min = 16; a.max = 3; }
       q(`#a${i}min`).value = num(a.min); q(`#a${i}max`).value = num(a.max); q(`#a${i}cur`).value = a.curva; cambio();
     };
     q(`#a${i}min`).oninput = e => { if (e.target.value !== "" && isFinite(+e.target.value)) { a.min = +e.target.value; cambio(); } };
@@ -876,7 +1069,7 @@ function medidores() {
   });
 }
 $("btnAgregar").onclick = () => {
-  const usados = new Set(cfg.asign.map(a => a.p)); const p = PARAMS.find(p => !usados.has(p.id)) || PARAMS[0];
+  const usados = new Set(cfg.asign.map(a => a.p)); const p = PARAMS.find(p => visible(p) && !usados.has(p.id)) || PARAMS[0];
   cfg.asign.push({ on: true, src: "x", p: p.id, min: p.min, max: p.max, curva: p.log ? "exp" : "lin", inv: false });
   dibujarAsign(); guardarCfg(); dibujarBase(); actualizar();
 };
@@ -892,7 +1085,7 @@ function dibujarPresets(sel) {
   const html = `<optgroup label="Incluidos">${PRESETS.map((p, i) => `<option value="b${i}">${esc(p.nombre)}</option>`).join("")}</optgroup>` +
     (presetsUsuario.length ? `<optgroup label="Tuyos">${presetsUsuario.map((p, i) => `<option value="u${i}">${esc(p.nombre)}</option>`).join("")}</optgroup>` : "");
   $("selPreset").innerHTML = html; $("selPresetBarra").innerHTML = `<option value="">Preset…</option>` + html;
-  if (sel) $("selPreset").value = sel; descPreset();
+  if (sel && listaPresets().some(p => p.id === sel)) $("selPreset").value = sel; descPreset();
 }
 function descPreset() {
   const p = listaPresets().find(p => p.id === $("selPreset").value);
@@ -902,23 +1095,20 @@ function descPreset() {
 $("selPreset").onchange = descPreset;
 $("selPresetBarra").onchange = e => { const p = listaPresets().find(p => p.id === e.target.value); if (p) { $("selPreset").value = p.id; descPreset(); cargarPreset(p); } e.target.value = ""; };
 function cargarPreset(p) {
-  const muestras = cfg.aj.muestras;
+  const antes = cfg.aj, nVocesAntes = antes.voces.length;
   cfg.asign = p.asign.map(a => ({ ...a }));
   cfg.base = Object.assign(baseDef(), p.base || {});
   if (p.propio) cfg.aj = normalizar({ aj: JSON.parse(JSON.stringify(p.aj || {})) }).aj;
-  else { const aj = AJ_DEF(); cfg.aj = Object.assign(aj, JSON.parse(JSON.stringify(p.aj || {})), { muestras }); ["luz", "luzPad", "sala", "bpm", "nota", "resp"].forEach(k => { if (!(p.aj && k in p.aj)) cfg.aj[k] = cfgPrevAj[k]; }); }
-  if (!p.propio) cfg.aj.muestras = muestras;
-  if (p.muestraA) {
-    cfg.aj.muestras[0].modo = p.muestraA.modo;
-    if (!A.slots[0].buffer && p.muestraA.ejemplo) { iniciarAudio(); cfg.aj.muestras[0].base = BASE_EJ[p.muestraA.ejemplo]; ponerMuestra(0, generarEjemplo(p.muestraA.ejemplo), EJEMPLOS[p.muestraA.ejemplo]); }
+  else {
+    cfg.aj = Object.assign(AJ_DEF(), JSON.parse(JSON.stringify(p.aj || {})));
+    AJ_PERSONALES.forEach(k => { if (!(p.aj && k in p.aj)) cfg.aj[k] = antes[k]; });
   }
-  cfg.preset = p.id; cfgPrevAj = { ...cfg.aj };
+  cfg.preset = p.id;
   if (cfg.aj.puerta === "tocar") E.encendido = false;
-  if (A.ctx) { aplicarAjustes(); A.slots.forEach((s, i) => rearmarSlot(i)); }
+  if (A.ctx) { calcular(); crearVoces(); aplicarAjustes(); if (+antes.sala !== +cfg.aj.sala) A.conv.buffer = respuestaReverb(+cfg.aj.sala, 2.2); }
   guardarCfg(); dibujarTodo(); actualizar(); actualizarPuerta();
   $("msgPreset").textContent = "Cargado: " + p.nombre; setTimeout(() => $("msgPreset").textContent = "", 2000);
 }
-let cfgPrevAj = { ...cfg.aj };
 $("btnCargarPreset").onclick = () => { const p = listaPresets().find(p => p.id === $("selPreset").value); if (p) cargarPreset(p); };
 $("btnGuardarPreset").onclick = () => {
   const nombre = $("nombrePreset").value.trim();
@@ -938,17 +1128,16 @@ const limpiarAsign = a => ({ on: a.on, src: a.src, p: a.p, min: +a.min, max: +a.
 /* =================================================================== PARÁMETROS */
 const posDe = (p, v) => p.log ? Math.log(v / p.min) / Math.log(p.max / p.min) : (v - p.min) / (p.max - p.min);
 const valDe = (p, pos) => p.log ? p.min * Math.pow(p.max / p.min, pos) : p.min + (p.max - p.min) * pos;
-const idSeguro = id => id.replace(".", "_");
 function dibujarBase() {
   const cont = $("paramsBase"); cont.innerHTML = "";
   GRUPOS.forEach(g => {
     const h = document.createElement("div"); h.className = "sub"; h.textContent = g; cont.appendChild(h);
     const grid = document.createElement("div"); grid.className = "params"; cont.appendChild(grid);
-    PARAMS.filter(p => p.g === g).forEach(p => {
+    PARAMS.filter(p => p.g === g && visible(p)).forEach(p => {
       const src = asignadoA(p.id);
       const d = document.createElement("div"); d.className = "param" + (src.length ? " mapeado" : "");
       d.innerHTML = `<div class="cab"><span>${esc(p.n)}${src.map(s => `<span class="chip" style="--c:${COLF[s]}">${FUENTES[s]}</span>`).join("")}</span><span class="v" data-pv="${p.id}"></span></div>
-        <input type="range" id="pb_${idSeguro(p.id)}" min="0" max="1" step="0.001" aria-label="${esc(p.n)}"${src.length ? " disabled" : ""}>`;
+        <input type="range" id="pb_${p.id}" min="0" max="1" step="0.001" aria-label="${esc(p.n)}"${src.length ? " disabled" : ""}>`;
       const r = d.querySelector("input"); r.value = clamp(posDe(p, cfg.base[p.id]));
       r.oninput = () => { cfg.base[p.id] = valDe(p, +r.value); actualizar(); };
       r.onchange = guardarCfg;
@@ -961,106 +1150,88 @@ function valoresBase() {
   document.querySelectorAll("[data-pv]").forEach(el => {
     const id = el.dataset.pv, v = E.vals[id]; if (v == null) return;
     el.textContent = id === "altura" && ESCALAS[cfg.aj.escala] ? fmtV(id, v) + " → " + nombreNota(cfg.aj.nota + cuantizar(v)) : fmtV(id, v);
-    if (asignadoA(id).length) { const r = $("pb_" + idSeguro(id)); if (r) r.value = clamp(posDe(P[id], v)); }
+    if (asignadoA(id).length) { const r = $("pb_" + id); if (r) r.value = clamp(posDe(P[id], v)); }
   });
 }
 $("btnResetBase").onclick = e => confirmar(e.currentTarget, "¿Seguro? Clic otra vez", () => { cfg.base = baseDef(); guardarCfg(); dibujarBase(); actualizar(); });
 
-/* =================================================================== OSCILADORES, ALTURA, EFECTOS */
+/* =================================================================== OSCILADORES */
 for (let m = 24; m <= 72; m++) $("ajNota").add(new Option(nombreNota(m) + " (MIDI " + m + ")", m));
 const FORMAS = { sawtooth: "Sierra", square: "Cuadrada", triangle: "Triángulo", sine: "Seno" };
 function dibujarVoces() {
   const cont = $("voces"); cont.innerHTML = "";
+  const n = cfg.aj.voces.length;
   cfg.aj.voces.forEach((vz, i) => {
     const d = document.createElement("div"); d.className = "voz";
-    d.innerHTML = `<b>${i + 1}</b><select id="vf${i}" aria-label="Forma de onda del oscilador ${i + 1}">${Object.entries(FORMAS).map(([k, n]) => `<option value="${k}"${k === vz.forma ? " selected" : ""}>${n}</option>`).join("")}</select>
-      <input type="number" id="vi${i}" min="-36" max="36" step="1" value="${vz.iv}" aria-label="Intervalo en semitonos" title="Intervalo en semitonos sobre la nota (12 = octava, 7 = quinta)">`;
+    d.innerHTML = `<b>Osc ${i + 1}</b>
+      <select id="vf${i}" aria-label="Forma de onda del oscilador ${i + 1}">${Object.entries(FORMAS).map(([k, nn]) => `<option value="${k}"${k === vz.forma ? " selected" : ""}>${nn}</option>`).join("")}</select>
+      <label title="Intervalo en semitonos respecto a la nota que tocas"><input type="number" id="vi${i}" min="-36" max="36" step="1" value="${vz.iv}" aria-label="Intervalo del oscilador ${i + 1} en semitonos"> st</label>
+      <label title="Ajuste fino en cents (100 ¢ = 1 semitono)"><input type="number" id="vc${i}" min="-100" max="100" step="1" value="${vz.fino}" aria-label="Ajuste fino del oscilador ${i + 1} en cents"> ¢</label>
+      <span class="res" data-res="${i}"></span>
+      <button class="quitar" aria-label="Quitar oscilador ${i + 1}" title="Quitar"${n <= 1 ? " disabled" : ""}>✕</button>`;
     d.querySelector("select").onchange = e => { vz.forma = e.target.value; guardarCfg(); aplicarAjustes(); actualizar(); };
-    d.querySelector("input").oninput = e => { if (e.target.value !== "" && isFinite(+e.target.value)) { vz.iv = +e.target.value; guardarCfg(); actualizar(); } };
+    d.querySelector(`#vi${i}`).oninput = e => { if (e.target.value !== "" && isFinite(+e.target.value)) { vz.iv = clamp(Math.round(+e.target.value), -36, 36); guardarCfg(); actualizar(); resVoces(); } };
+    d.querySelector(`#vc${i}`).oninput = e => { if (e.target.value !== "" && isFinite(+e.target.value)) { vz.fino = clamp(+e.target.value, -100, 100); guardarCfg(); actualizar(); } };
+    d.querySelector(".quitar").onclick = () => {
+      if (cfg.aj.voces.length <= 1) return;
+      // Corre los niveles de los osciladores siguientes para que cada uno conserve el suyo
+      for (let k = i + 1; k < cfg.aj.voces.length; k++) cfg.base["osc" + k] = cfg.base["osc" + (k + 1)];
+      cfg.asign = cfg.asign.filter(a => a.p !== "osc" + (i + 1)).map(a => { const m = /^osc(\d)$/.exec(a.p); if (m && +m[1] > i + 1) a.p = "osc" + (+m[1] - 1); return a; });
+      cfg.aj.voces.splice(i, 1); cambioVoces();
+    };
     cont.appendChild(d);
   });
+  $("btnAgregarVoz").disabled = n >= MAX_VOCES;
+  $("vocesInfo").textContent = n + " de " + MAX_VOCES + " osciladores. El volumen total se mantiene parejo al agregar o quitar.";
+  resVoces();
 }
+function resVoces() {
+  const base = cfg.aj.nota + cuantizar(E.vals.altura || 0);
+  cfg.aj.voces.forEach((vz, i) => { const el = document.querySelector(`[data-res="${i}"]`); if (el) el.innerHTML = `${nombreNota(base + vz.iv)}<small>${nombreIntervalo(vz.iv)}</small>`; });
+}
+function cambioVoces() { guardarCfg(); if (A.ctx) { calcular(); crearVoces(); } dibujarVoces(); dibujarBase(); dibujarAsign(); actualizar(); }
+$("btnAgregarVoz").onclick = () => {
+  if (cfg.aj.voces.length >= MAX_VOCES) return;
+  const sugeridos = [0, 7, 12, -12, 19, 24, 4, 16], usados = new Set(cfg.aj.voces.map(v => v.iv));
+  const iv = sugeridos.find(s => !usados.has(s)); cfg.aj.voces.push({ forma: "sawtooth", iv: iv == null ? 0 : iv, fino: 0 });
+  cfg.base["osc" + cfg.aj.voces.length] = 1; cambioVoces();
+};
+
+/* =================================================================== AJUSTES */
 function dibujarAjustes() {
   $("ajNota").value = cfg.aj.nota; $("ajEscala").value = cfg.aj.escala; $("ajPuerta").value = cfg.aj.puerta; $("ajResp").value = cfg.aj.resp;
   $("ajFiltro").value = cfg.aj.filtro; $("ajSala").value = cfg.aj.sala; $("ajBpm").value = cfg.aj.bpm; $("ajLuz").value = cfg.aj.luz; $("ajLuzPad").checked = cfg.aj.luzPad;
+  $("ajArp").value = cfg.aj.arp; $("ajTremForma").value = cfg.aj.tremForma; $("ajSinc").checked = cfg.aj.sinc;
   dibujarVoces();
 }
 const ajuste = (id, clave, conv, despues) => $(id).addEventListener("change", e => {
   const v = e.target.type === "checkbox" ? e.target.checked : conv(e.target.value); if (typeof v === "number" && !isFinite(v)) return;
-  cfg.aj[clave] = v; cfgPrevAj[clave] = v; guardarCfg(); despues && despues(); actualizar();
+  cfg.aj[clave] = v; guardarCfg(); despues && despues(); actualizar();
 });
-ajuste("ajNota", "nota", Number);
-ajuste("ajEscala", "escala", String, valoresBase);
+ajuste("ajNota", "nota", Number, resVoces);
+ajuste("ajEscala", "escala", String, () => { valoresBase(); resVoces(); });
 ajuste("ajPuerta", "puerta", String, () => { if (cfg.aj.puerta === "tocar") E.encendido = false; actualizarPuerta(); });
 ajuste("ajResp", "resp", Number);
 ajuste("ajFiltro", "filtro", String, aplicarAjustes);
+ajuste("ajTremForma", "tremForma", String, aplicarAjustes);
+ajuste("ajArp", "arp", String);
 ajuste("ajSala", "sala", Number, () => { if (A.ctx) A.conv.buffer = respuestaReverb(+cfg.aj.sala, 2.2); });
 ajuste("ajBpm", "bpm", v => clamp(Math.round(+v), 40, 240));
 ajuste("ajLuz", "luz", String);
 ajuste("ajLuzPad", "luzPad");
-
-/* =================================================================== MUESTRAS */
-const MODOS = { loop: "Loop", granular: "Nube granular", disparo: "Disparo" };
-function dibujarSlotsCfg() {
-  const cont = $("slotsCfg"); cont.innerHTML = "";
-  SLOTS.forEach((S, i) => {
-    const m = cfg.aj.muestras[i], s = A.slots[i];
-    const d = document.createElement("div"); d.className = "slot";
-    d.innerHTML = `<h3>Muestra M${S} <small data-est>${s.buffer ? esc(s.nombre) : "vacía"}</small></h3>
-      <div class="fila"><input type="file" id="mf${i}" accept="audio/*" aria-label="Archivo de audio para M${S}" style="max-width:100%"></div>
-      <div class="fila"><select id="me${i}" aria-label="Generar ejemplo"><option value="">Generar un ejemplo…</option>${Object.entries(EJEMPLOS).map(([k, n]) => `<option value="${k}">${n}</option>`).join("")}</select>
-        <button class="btn peq" id="mq${i}">Vaciar</button>${m.modo === "disparo" ? `<button class="btn peq" id="md${i}">Disparar <kbd>${i + 1}</kbd></button>` : ""}</div>
-      <div class="ajustes">
-        <label>Modo<select id="mm${i}">${Object.entries(MODOS).map(([k, n]) => `<option value="${k}"${k === m.modo ? " selected" : ""}>${n}</option>`).join("")}</select></label>
-        <label>Nota base<select id="mb${i}"></select></label>
-        <label class="check"><input type="checkbox" id="ms${i}"${m.sigue ? " checked" : ""}> <span>Sigue la altura</span></label>
-        ${m.modo === "disparo" ? `<label class="check"><input type="checkbox" id="mt${i}"${m.alTocar ? " checked" : ""}> <span>Disparar al tocar el recuadro</span></label>` : ""}
-      </div>`;
-    const sb = d.querySelector(`#mb${i}`); for (let n = 24; n <= 96; n++) sb.add(new Option(nombreNota(n), n, false, n === m.base));
-    const est = d.querySelector("[data-est]");
-    d.querySelector(`#mf${i}`).onchange = async e => {
-      const f = e.target.files[0]; if (!f) return; iniciarAudio(); est.textContent = "Cargando…";
-      try { ponerMuestra(i, await A.ctx.decodeAudioData(await f.arrayBuffer()), f.name); est.textContent = f.name; }
-      catch (err) { est.textContent = "No se pudo leer ese archivo. Prueba con wav, mp3 u ogg."; }
-    };
-    d.querySelector(`#me${i}`).onchange = e => {
-      const k = e.target.value; if (!k) return; iniciarAudio(); m.base = BASE_EJ[k]; sb.value = m.base;
-      if (k === "golpe" && m.modo !== "disparo") m.modo = "disparo";
-      guardarCfg(); ponerMuestra(i, generarEjemplo(k), EJEMPLOS[k]); dibujarSlotsCfg();
-    };
-    d.querySelector(`#mq${i}`).onclick = () => { if (A.ctx) ponerMuestra(i, null); dibujarSlotsCfg(); };
-    if (m.modo === "disparo") d.querySelector(`#md${i}`).onclick = () => disparar(i);
-    d.querySelector(`#mm${i}`).onchange = e => { m.modo = e.target.value; guardarCfg(); rearmarSlot(i); dibujarSlotsCfg(); dibujarSlots(); actualizar(); };
-    sb.onchange = () => { m.base = +sb.value; guardarCfg(); actualizar(); };
-    d.querySelector(`#ms${i}`).onchange = e => { m.sigue = e.target.checked; guardarCfg(); actualizar(); };
-    if (m.modo === "disparo") d.querySelector(`#mt${i}`).onchange = e => { m.alTocar = e.target.checked; guardarCfg(); };
-    cont.appendChild(d);
-  });
-}
-function dibujarSlots() {
-  const cont = $("slotsRapidos"); cont.innerHTML = "";
-  SLOTS.forEach((S, i) => {
-    const s = A.slots[i], m = cfg.aj.muestras[i];
-    const b = document.createElement("button"); b.className = "slot-btn" + (s.buffer ? "" : " vacio"); b.dataset.i = i;
-    b.innerHTML = `<b>M${S} <kbd>${S}</kbd></b><span>${s.buffer ? MODOS[m.modo] + " · " + esc(s.nombre) : "vacía"}</span>`;
-    b.title = s.buffer ? (m.modo === "disparo" ? "Disparar" : "Ir a la ranura") : "Cargar una muestra";
-    b.onclick = () => { if (s.buffer && m.modo === "disparo") disparar(i); else document.querySelector('[data-tab="muestras"]').click(); };
-    cont.appendChild(b);
-  });
-}
+ajuste("ajSinc", "sinc");
 
 /* =================================================================== GUARDAR */
-let enMarco = true; try { enMarco = window.top !== window.self; } catch (e) {}
-function textoCfg() { return JSON.stringify({ tipo: "mtrackpad", version: 1, asign: cfg.asign.map(limpiarAsign), base: cfg.base, aj: cfg.aj }, (k, v) => typeof v === "number" ? +v.toPrecision(5) : v, 2); }
+function textoCfg() { return JSON.stringify({ tipo: "mtrackpad", version: 2, asign: cfg.asign.map(limpiarAsign), base: cfg.base, aj: cfg.aj }, (k, v) => typeof v === "number" ? +v.toPrecision(5) : v, 2); }
 function refrescarJson() { if (document.activeElement !== $("json")) $("json").value = textoCfg(); }
 function copiar(txt, msg, area) {
   const ok = () => { msg.textContent = "Copiado"; setTimeout(() => msg.textContent = "", 2000); };
-  const manual = () => { if (area) { area.focus(); area.select(); } msg.textContent = "Selecciona el texto y cópialo con Ctrl+C"; };
+  const manual = () => { if (area) { area.focus(); area.select(); } msg.textContent = "Selecciona el texto y cópialo con Cmd/Ctrl+C"; };
   try { navigator.clipboard.writeText(txt).then(ok, manual); } catch (e) { manual(); }
 }
 function aplicarConfig(o) {
-  cfg = normalizar({ asign: o.asign, base: o.base, aj: o.aj, preset: null }); cfgPrevAj = { ...cfg.aj };
-  if (A.ctx) { aplicarAjustes(); A.conv.buffer = respuestaReverb(+cfg.aj.sala, 2.2); A.slots.forEach((s, i) => rearmarSlot(i)); }
+  cfg = normalizar({ asign: o.asign, base: o.base, aj: o.aj, preset: null });
+  if (A.ctx) { calcular(); crearVoces(); aplicarAjustes(); A.conv.buffer = respuestaReverb(+cfg.aj.sala, 2.2); }
   guardarCfg(); dibujarTodo(); actualizar(); actualizarPuerta();
 }
 function aplicarTexto(txt, msg) {
@@ -1072,12 +1243,8 @@ function aplicarTexto(txt, msg) {
 $("btnCopiarJson").onclick = () => copiar($("json").value, $("msgJson"), $("json"));
 $("btnAplicarJson").onclick = () => aplicarTexto($("json").value, $("msgJson"));
 $("abrirJson").onchange = async e => { const f = e.target.files[0]; if (f) aplicarTexto(await f.text(), $("msgJson")); e.target.value = ""; };
-$("btnDescargar").hidden = enMarco;
-$("btnDescargar").onclick = () => {
-  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([textoCfg()], { type: "application/json" }));
-  a.download = "mtrackpad.json"; document.body.appendChild(a); a.click(); a.remove();
-};
-$("btnFabrica").onclick = e => confirmar(e.currentTarget, "¿Seguro? Clic otra vez", () => { const f = fabrica(); aplicarConfig(f); dibujarPresets("b0"); });
+$("btnDescargar").onclick = () => descargar(new Blob([textoCfg()], { type: "application/json" }), "mtrackpad-" + fechaArchivo() + ".json");
+$("btnFabrica").onclick = e => confirmar(e.currentTarget, "¿Seguro? Clic otra vez", () => { aplicarConfig(fabrica()); dibujarPresets("b0"); });
 
 /* =================================================================== PESTAÑAS */
 document.querySelectorAll("[role=tab]").forEach(b => b.onclick = () => {
@@ -1092,6 +1259,9 @@ $("btnOn").onclick = () => encender(!E.encendido);
 $("btnDestello").onclick = destello;
 $("btnFull").onclick = () => Luces.pantalla(true);
 $("btnRec").onclick = grabar;
+$("btnTodas").onclick = todas;
+$("btnDetTodas").onclick = () => { pistas.forEach(parar); dibujarPistas(); };
+$("btnMezcla").onclick = () => { iniciarAudio(); exportarMezcla(); };
 $("salir").onclick = () => Luces.pantalla(false);
 const escribiendo = e => /INPUT|SELECT|TEXTAREA/.test(e.target.tagName) && !["range", "checkbox"].includes(e.target.type);
 document.addEventListener("keydown", e => {
@@ -1104,15 +1274,17 @@ document.addEventListener("keydown", e => {
   else if (k === "f" && !e.repeat) destello();
   else if (k === "v" && !e.repeat) Luces.pantalla(!document.body.classList.contains("pantalla-completa"));
   else if (k === "g" && !e.repeat) grabar();
+  else if (k === "t" && !e.repeat) todas();
   else if (e.key === "ArrowUp") { e.preventDefault(); ponerXY(E.x, E.y + paso); }
   else if (e.key === "ArrowDown") { e.preventDefault(); ponerXY(E.x, E.y - paso); }
   else if (e.key === "ArrowRight") { e.preventDefault(); ponerXY(E.x + paso, E.y); }
   else if (e.key === "ArrowLeft") { e.preventDefault(); ponerXY(E.x - paso, E.y); }
   else if (k === "e") ponerZ(E.z + paso);
   else if (k === "q") ponerZ(E.z - paso);
-  else if (/^[1-4]$/.test(e.key) && !e.repeat) disparar(+e.key - 1);
+  else if (/^[1-9]$/.test(e.key) && !e.repeat) { const p = pistas[+e.key - 1]; if (p) alternar(p); }
 });
 document.addEventListener("keyup", e => { if (e.code === "Space" && E.espacio) { E.espacio = false; actualizarPuerta(); } });
+window.addEventListener("beforeunload", e => { if (pistas.length) { e.preventDefault(); e.returnValue = ""; } });
 
 /* =================================================================== BUCLE */
 function actualizar() { aplicarAudio(calcular()); }
@@ -1121,7 +1293,6 @@ let tPrev = performance.now(), ultimoTexto = 0;
 const colorAcento = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#ffb547";
 function cuadro(now) {
   const dt = Math.min(0.1, (now - tPrev) / 1000); tPrev = now;
-  // Velocidad del gesto: sube con el movimiento y cae sola
   const vAntes = E.v; E.v += (E.vRaw - E.v) * (1 - Math.exp(-dt * 12)); E.vRaw *= Math.exp(-dt * 5);
   if (usaFuente("v") && Math.abs(E.v - vAntes) > 0.002) actualizar();
   let nivel = 0;
@@ -1134,18 +1305,19 @@ function cuadro(now) {
   oscX.strokeStyle = colorAcento; oscX.lineWidth = 1.5 * devicePixelRatio; oscX.beginPath();
   for (let i = 0; i < 512; i++) { const x = i / 511 * w, y = h / 2 - (A.analizador ? datos[i] : 0) * h * 0.45; i ? oscX.lineTo(x, y) : oscX.moveTo(x, y); }
   oscX.stroke();
+  progresoPistas();
   if (now - ultimoTexto > 100) {
     ultimoTexto = now; const f = fuentes();
     $("lect").innerHTML = ["x", "y", "z", "r", "a", "v", "p"].map((s, i) => `<span style="color:${COLF[s]}">${FUENTES[s]} ${f[s].toFixed(2)}</span>${i % 2 ? "<br>" : " · "}`).join("") +
-      `nota ${nombreNota(cfg.aj.nota + cuantizar(E.vals.altura || 0))}`;
+      `nota ${nombreNota(notaActual(E.vals))}`;
     medidores(); valoresBase();
-    if (grabador && grabador.state === "recording") $("estRec").textContent = "● GRABANDO " + Math.floor((now - tGrab) / 60000) + ":" + String(Math.floor((now - tGrab) / 1000) % 60).padStart(2, "0");
+    if (Grab.activo) $("estRec").textContent = "● GRABANDO " + dur((now - Grab.inicio) / 1000);
   }
   requestAnimationFrame(cuadro);
 }
 
 /* =================================================================== INICIO */
-function dibujarTodo() { dibujarAjustes(); dibujarAsign(); dibujarBase(); dibujarSlotsCfg(); dibujarSlots(); refrescarJson(); }
+function dibujarTodo() { dibujarAjustes(); dibujarAsign(); dibujarBase(); dibujarPistas(); refrescarJson(); }
 calcular(); dibujarPresets(typeof cfg.preset === "string" ? cfg.preset : "b0"); dibujarTodo();
 ponerXY(E.x, E.y); ponerZ(E.z); actualizarPuerta();
 requestAnimationFrame(cuadro);
